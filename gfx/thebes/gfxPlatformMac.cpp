@@ -181,6 +181,24 @@ gfxPlatformMac::MakePlatformFont(const nsAString& aFontName,
                                                                      aLength);
 }
 
+// Automates a whole buncha boilerplate.
+// Since HTTPS is becoming more common, check that first.
+#define HTTP_OR_HTTPS_SUBDIR(x) \
+    { \
+       if (!failed) { \
+           NS_NAMED_LITERAL_CSTRING(https_, "https://" x); \
+           spec.Left(loc, https_.Length()); \
+           if (loc.Equals(https_)) { \
+               failed = true; \
+           } else { \
+               NS_NAMED_LITERAL_CSTRING(http_, "http://" x); \
+               spec.Left(loc, http_.Length()); \
+               if (loc.Equals(http_)) \
+                   failed = true; \
+           } \
+       } \
+    }
+
 bool
 gfxPlatformMac::IsFontFormatSupported(nsIURI *aFontURI, uint32_t aFormatFlags)
 {
@@ -202,6 +220,8 @@ gfxPlatformMac::IsFontFormatSupported(nsIURI *aFontURI, uint32_t aFormatFlags)
     // no format hint set, need to look at data
     return true;
 }
+
+#undef HTTP_OR_HTTPS_SUBDIR
 
 // these will also move to gfxPlatform once all platforms support the fontlist
 nsresult
