@@ -1764,6 +1764,7 @@ public:
   }
   nsINode* RemoveChild(nsINode& aChild, mozilla::ErrorResult& aError);
   already_AddRefed<nsINode> CloneNode(bool aDeep, mozilla::ErrorResult& aError);
+  bool IsSameNode(nsINode* aNode);
   bool IsEqualNode(nsINode* aNode);
   void GetNamespaceURI(nsAString& aNamespaceURI) const
   {
