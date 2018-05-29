@@ -328,6 +328,7 @@ hb_blob_is_immutable (hb_blob_t *blob)
 unsigned int
 hb_blob_get_length (hb_blob_t *blob)
 {
+if (!blob) return 0; // wallpaper TenFourFox issue 309
   return blob->length;
 }
 

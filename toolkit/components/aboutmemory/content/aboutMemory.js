@@ -1686,6 +1686,7 @@ function pad(aS, aN, aC)
 // implemented in terminals, and this code sticks to that subset to maximize
 // the chance that copying and pasting about:memory output to a terminal will
 // work correctly.
+/*
 const kHorizontal                   = "\u2500",
       kVertical                     = "\u2502",
       kUpAndRight                   = "\u2514",
@@ -1695,6 +1696,17 @@ const kHorizontal                   = "\u2500",
       kVertical_Space_Space         = "\u2502  ";
 
 const kNoKidsSep                    = " \u2500\u2500 ",
+*/
+// It doesn't. 10.4Fx issue 121.
+const kHorizontal                   = "-",
+      kVertical                     = "|",
+      kUpAndRight                   = "+",
+      kUpAndRight_Right_Right       = "+--",
+      kVerticalAndRight             = "+",
+      kVerticalAndRight_Right_Right = "+--",
+      kVertical_Space_Space         = "|  ";
+
+const kNoKidsSep                    = " -- ",
       kHideKidsSep                  = " ++ ",
       kShowKidsSep                  = " -- ";
 

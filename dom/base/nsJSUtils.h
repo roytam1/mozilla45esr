@@ -205,10 +205,10 @@ public:
     return str && init(aContext, str);
   }
 
-  bool init(JSContext* aContext, jsid id)
+  bool init(JSContext* aContext, jsid jid)
   {
     JS::Rooted<JS::Value> v(aContext);
-    return JS_IdToValue(aContext, id, &v) && init(aContext, v);
+    return JS_IdToValue(aContext, jid, &v) && init(aContext, v);
   }
 
   bool init(const JS::Value &v);

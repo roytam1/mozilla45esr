@@ -77,7 +77,8 @@ pref("extensions.systemAddon.update.url", "https://aus5.mozilla.org/update/3/Sys
 pref("extensions.autoDisableScopes", 15);
 
 // Require signed add-ons by default
-pref("xpinstall.signatures.required", true);
+// ... except on TenFourFox
+pref("xpinstall.signatures.required", false);
 pref("xpinstall.signatures.devInfoURL", "https://wiki.mozilla.org/Addons/Extension_Signing");
 
 // Dictionary download preference
@@ -129,7 +130,7 @@ pref("app.update.enabled", true);
 pref("app.update.auto", true);
 
 // See chart in nsUpdateService.js source for more details
-pref("app.update.mode", 1);
+pref("app.update.mode", 2);
 
 // If set to true, the Update Service will present no UI for any event.
 pref("app.update.silent", false);
@@ -144,7 +145,7 @@ pref("app.update.badge", false);
 
 // If set to true, the Update Service will apply updates in the background
 // when it finishes downloading them.
-pref("app.update.staging.enabled", true);
+pref("app.update.staging.enabled", false);
 
 // Update service URL:
 pref("app.update.url", "https://aus5.mozilla.org/update/6/%PRODUCT%/%VERSION%/%BUILD_ID%/%BUILD_TARGET%/%LOCALE%/%CHANNEL%/%OS_VERSION%/%SYSTEM_CAPABILITIES%/%DISTRIBUTION%/%DISTRIBUTION_VERSION%/update.xml");
@@ -222,7 +223,8 @@ pref("browser.fixup.domainwhitelist.localhost", true);
 pref("general.useragent.locale", "@AB_CD@");
 pref("general.skins.selectedSkin", "classic/1.0");
 
-pref("general.smoothScroll", true);
+// too slow on TenFourFox
+pref("general.smoothScroll", false);
 #ifdef UNIX_BUT_NOT_MAC
 pref("general.autoScroll", false);
 #else
@@ -241,7 +243,7 @@ pref("browser.shell.defaultBrowserCheckCount", 0);
 pref("browser.startup.page",                1);
 pref("browser.startup.homepage",            "chrome://branding/locale/browserconfig.properties");
 
-pref("browser.slowStartup.notificationDisabled", false);
+pref("browser.slowStartup.notificationDisabled", true); // STFU!
 pref("browser.slowStartup.timeThreshold", 40000);
 pref("browser.slowStartup.maxSamples", 5);
 
@@ -1011,15 +1013,15 @@ pref("browser.sessionstore.resume_from_crash", true);
 pref("browser.sessionstore.resume_session_once", false);
 
 // minimal interval between two save operations in milliseconds
-pref("browser.sessionstore.interval", 15000);
+pref("browser.sessionstore.interval", 25000);
 // on which sites to save text data, POSTDATA and cookies
 // 0 = everywhere, 1 = unencrypted sites, 2 = nowhere
 pref("browser.sessionstore.privacy_level", 0);
 // how many tabs can be reopened (per window)
-pref("browser.sessionstore.max_tabs_undo", 10);
+pref("browser.sessionstore.max_tabs_undo", 4);
 // how many windows can be reopened (per session) - on non-OS X platforms this
 // pref may be ignored when dealing with pop-up windows to ensure proper startup
-pref("browser.sessionstore.max_windows_undo", 3);
+pref("browser.sessionstore.max_windows_undo", 2);
 // number of crashes that can occur before the about:sessionrestore page is displayed
 // (this pref has no effect if more than 6 hours have passed since the last crash)
 pref("browser.sessionstore.max_resumed_crashes", 1);
@@ -1149,7 +1151,7 @@ pref("dom.ipc.shims.enabledWarnings", false);
 
 // Start the browser in e10s mode
 pref("browser.tabs.remote.autostart", false);
-pref("browser.tabs.remote.desktopbehavior", true);
+pref("browser.tabs.remote.desktopbehavior", false);
 
 #if defined(XP_WIN) && defined(MOZ_SANDBOX)
 // When this pref is true the Windows process sandbox will set up dummy
@@ -1427,11 +1429,7 @@ pref("plain_text.wrap_long_lines", true);
 pref("dom.debug.propagate_gesture_events_through_content", false);
 
 // The request URL of the GeoLocation backend.
-#ifdef RELEASE_BUILD
-pref("geo.wifi.uri", "https://www.googleapis.com/geolocation/v1/geolocate?key=%GOOGLE_API_KEY%");
-#else
 pref("geo.wifi.uri", "https://location.services.mozilla.com/v1/geolocate?key=%MOZILLA_API_KEY%");
-#endif
 
 #ifdef XP_MACOSX
 #ifdef RELEASE_BUILD
@@ -1617,7 +1615,7 @@ pref("reader.parse-node-limit", 0);
 // and because (normally) these errors are not persisted anywhere.
 pref("reader.errors.includeURLs", true);
 
-pref("browser.pocket.enabled", true);
+pref("browser.pocket.enabled", false);
 pref("browser.pocket.api", "api.getpocket.com");
 pref("browser.pocket.site", "getpocket.com");
 pref("browser.pocket.oAuthConsumerKey", "40249-e88c401e1b1f2242d9e441c4");

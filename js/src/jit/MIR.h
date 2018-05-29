@@ -9545,6 +9545,13 @@ class MLoadUnboxedScalar
     bool requiresBarrier_;
     int32_t offsetAdjustment_;
     bool canonicalizeDoubles_;
+  public:
+    enum TargetKind {
+        ScalarTarget = 0,
+        TypedArrayTarget
+    };
+  private:
+    TargetKind target_;
 
     MLoadUnboxedScalar(MDefinition* elements, MDefinition* index,
                        Scalar::Type storageType, MemoryBarrierRequirement requiresBarrier,
@@ -9562,6 +9569,7 @@ class MLoadUnboxedScalar
             setGuard();         // Not removable or movable
         else
             setMovable();
+        target_ = ScalarTarget;
         MOZ_ASSERT(IsValidElementsType(elements, offsetAdjustment));
         MOZ_ASSERT(index->type() == MIRType_Int32);
         MOZ_ASSERT(storageType >= 0 && storageType < Scalar::MaxTypedArrayViewType);
@@ -9582,6 +9590,12 @@ class MLoadUnboxedScalar
                                              canonicalizeDoubles);
     }
 
+    TargetKind target() {
+        return target_;
+    }
+    void setTarget(TargetKind t) {
+        target_ = t;
+    }
     void setSimdRead(Scalar::Type type, unsigned numElems) {
         readType_ = type;
         numElems_ = numElems;
@@ -9832,6 +9846,10 @@ class MStoreUnboxedScalar
         DontTruncateInput,
         TruncateInput
     };
+    enum TargetKind {
+        ScalarTarget = 0,
+        TypedArrayTarget
+    };
 
   private:
     Scalar::Type storageType_;
@@ -9842,6 +9860,8 @@ class MStoreUnboxedScalar
     bool requiresBarrier_;
     int32_t offsetAdjustment_;
     unsigned numElems_; // used only for SIMD
+    
+    TargetKind target_;
 
     MStoreUnboxedScalar(MDefinition* elements, MDefinition* index, MDefinition* value,
                         Scalar::Type storageType, TruncateInputKind truncateInput,
@@ -9858,6 +9878,7 @@ class MStoreUnboxedScalar
             setGuard();         // Not removable or movable
         else
             setMovable();
+        target_ = ScalarTarget;
         MOZ_ASSERT(IsValidElementsType(elements, offsetAdjustment));
         MOZ_ASSERT(index->type() == MIRType_Int32);
         MOZ_ASSERT(storageType >= 0 && storageType < Scalar::MaxTypedArrayViewType);
@@ -9909,6 +9930,12 @@ class MStoreUnboxedScalar
     }
     int32_t offsetAdjustment() const {
         return offsetAdjustment_;
+    }
+    TargetKind target() {
+        return target_;
+    }
+    void setTarget(TargetKind t) {
+        target_ = t;
     }
     TruncateKind operandTruncateKind(size_t index) const override;
 

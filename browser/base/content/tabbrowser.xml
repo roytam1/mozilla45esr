@@ -1947,7 +1947,7 @@
 
             if (animate) {
               requestAnimationFrame(function () {
-                this.tabContainer._handleTabTelemetryStart(t, aURI);
+                //this.tabContainer._handleTabTelemetryStart(t, aURI);
 
                 // kick the animation off
                 t.setAttribute("fadein", "true");
@@ -2132,7 +2132,7 @@
               return;
             }
 
-            this.tabContainer._handleTabTelemetryStart(aTab);
+            //this.tabContainer._handleTabTelemetryStart(aTab);
 
             this._blurTab(aTab);
             aTab.style.maxWidth = ""; // ensure that fade-out transition happens
@@ -4608,7 +4608,7 @@
           } catch (ex) {
             this._tabAnimationLoggingEnabled = false;
           }
-          this._browserNewtabpageEnabled = Services.prefs.getBoolPref("browser.newtabpage.enabled");
+          this._browserNewtabpageEnabled = false; //Services.prefs.getBoolPref("browser.newtabpage.enabled");
         ]]>
       </constructor>
 
@@ -5263,6 +5263,7 @@
         <parameter name="aURI"/>
         <body>
         <![CDATA[
+/*
           // Animation-smoothness telemetry/logging
           if (Services.telemetry.canRecordExtended || this._tabAnimationLoggingEnabled) {
             if (aURI == "about:newtab" && (aTab._tPos == 1 || aTab._tPos == 2)) {
@@ -5277,6 +5278,7 @@
 
           // Overall animation duration
           aTab._animStartTime = Date.now();
+*/
         ]]>
         </body>
       </method>
@@ -5285,6 +5287,7 @@
         <parameter name="aTab"/>
         <body>
         <![CDATA[
+/*
           if (!aTab._animStartTime) {
             return;
           }
@@ -5333,6 +5336,7 @@
               Services.telemetry.getHistogramById("FX_TAB_ANIM_OPEN" + preview + "_FRAME_INTERVAL_MS").add(averageInterval);
             }
           }
+*/
         ]]>
         </body>
       </method>
@@ -5351,7 +5355,7 @@
 
         var tab = event.target;
 
-        this._handleTabTelemetryEnd(tab);
+        //this._handleTabTelemetryEnd(tab);
 
         if (tab.getAttribute("fadein") == "true") {
           if (tab._fullyOpen)

@@ -290,6 +290,11 @@ VideoSink::RenderVideoFrames(int32_t aMaxFrames,
     VideoData* frame = frames[i]->As<VideoData>();
 
     frame->mSentToCompositor = true;
+    // This frame is behind the current time. Let's report it as dropped.
+    // bug 1299018
+    if (aClockTime >= frame->GetEndTime()) {
+      frame->mIsDropped = true;
+    }
 
     if (!frame->mImage || !frame->mImage->IsValid()) {
       continue;
@@ -342,6 +347,7 @@ VideoSink::UpdateRenderedVideoFrames()
   // the current frame.
   NS_ASSERTION(clockTime >= 0, "Should have positive clock time.");
 
+#if(0)
   int64_t remainingTime = -1;
   if (VideoQueue().GetSize() > 0) {
     RefPtr<MediaData> currentFrame = VideoQueue().PopFront();
@@ -353,7 +359,8 @@ VideoSink::UpdateRenderedVideoFrames()
         break;
       }
       ++framesRemoved;
-      if (!currentFrame->As<VideoData>()->mSentToCompositor) {
+      if (!currentFrame->As<VideoData>()->mSentToCompositor ||
+           currentFrame->As<VideoData>()->mIsDropped /* bug 1299018 */) {
         mFrameStats.NotifyDecodedFrames(0, 0, 1);
         VSINK_LOG_V("discarding video frame mTime=%lld clock_time=%lld",
                     currentFrame->mTime, clockTime);
@@ -377,6 +384,45 @@ VideoSink::UpdateRenderedVideoFrames()
 
   TimeStamp target = nowTime + TimeDuration::FromMicroseconds(
     remainingTime / mAudioSink->GetPlaybackParams().mPlaybackRate);
+
+#else
+  // bug 1258870
+  // Skip frames up to the playback position.
+  int64_t lastDisplayedFrameEndTime = 0;
+  while (VideoQueue().GetSize() > 0 &&
+         clockTime >= VideoQueue().PeekFront()->GetEndTime()) { // bug 1298594
+    RefPtr<MediaData> frame = VideoQueue().PopFront();
+    if ( frame->As<VideoData>()->mSentToCompositor &&
+        !frame->As<VideoData>()->mIsDropped /* bug 1299018 */) {
+      lastDisplayedFrameEndTime = frame->GetEndTime();
+      mFrameStats.NotifyPresentedFrame();
+    } else {
+      mFrameStats.NotifyDecodedFrames(0, 0, 1);
+      VSINK_LOG_V("discarding video frame mTime=%lld clock_time=%lld",
+                  frame->mTime, clockTime);
+    }
+  }
+
+  // The presentation end time of the last video frame displayed is either
+  // the end time of the current frame, or if we dropped all frames in the
+  // queue, the end time of the last frame we removed from the queue.
+  RefPtr<MediaData> currentFrame = VideoQueue().PeekFront();
+  mVideoFrameEndTime = currentFrame ? currentFrame->GetEndTime() : lastDisplayedFrameEndTime;
+
+  RenderVideoFrames(mVideoQueueSendToCompositorSize, clockTime, nowTime);
+
+  // Get the timestamp of the next frame. Schedule the next update at
+  // the start time of the next frame. If we don't have a next frame,
+  // we will run render loops again upon incoming frames.
+  nsTArray<RefPtr<MediaData>> frames;
+  VideoQueue().GetFirstElements(2, &frames);
+  if (frames.Length() < 2) {
+    return;
+  }
+
+  int64_t nextFrameTime = frames[1]->mTime;
+  TimeStamp target = nowTime + TimeDuration::FromMicroseconds((nextFrameTime - clockTime) / mAudioSink->GetPlaybackParams().mPlaybackRate);
+#endif
 
   RefPtr<VideoSink> self = this;
   mUpdateScheduler.Ensure(target, [self] () {

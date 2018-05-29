@@ -46,7 +46,7 @@ OptimizationInfo::initNormalOptimizationInfo()
     inliningMaxCallerBytecodeLength_ = 1500;
     maxInlineDepth_ = 3;
     scalarReplacement_ = true;
-    smallFunctionMaxInlineDepth_ = 10;
+    smallFunctionMaxInlineDepth_ = 13;
     compilerWarmUpThreshold_ = CompilerWarmupThreshold;
     inliningWarmUpThresholdFactor_ = 0.125;
     inliningRecompileThresholdFactor_ = 4;

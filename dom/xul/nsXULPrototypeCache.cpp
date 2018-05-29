@@ -391,7 +391,7 @@ nsXULPrototypeCache::GetOutputStream(nsIURI* uri, nsIObjectOutputStream** stream
     nsCOMPtr<nsIStorageStream> storageStream;
     bool found = mOutputStreamTable.Get(uri, getter_AddRefs(storageStream));
     if (found) {
-        objectOutput = do_CreateInstance("mozilla.org/binaryoutputstream;1");
+        objectOutput = do_CreateInstance("@mozilla.org/binaryoutputstream;1");
         if (!objectOutput) return NS_ERROR_OUT_OF_MEMORY;
         nsCOMPtr<nsIOutputStream> outputStream
             = do_QueryInterface(storageStream);

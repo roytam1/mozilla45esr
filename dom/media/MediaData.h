@@ -303,6 +303,10 @@ public:
 
   bool mSentToCompositor;
 
+  // True if this video frame is reported as dropped
+  // for missing the compositor deadline. (bug 1299018)
+  bool mIsDropped = false;
+
   VideoData(int64_t aOffset,
             int64_t aTime,
             int64_t aDuration,

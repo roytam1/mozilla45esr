@@ -358,8 +358,8 @@ pref("media.gstreamer.enable-blacklist", true);
 #ifdef MOZ_WIDGET_UIKIT
 pref("media.mp3.enabled", true);
 #endif
-pref("media.apple.mp3.enabled", true);
-pref("media.apple.mp4.enabled", true);
+pref("media.apple.mp3.enabled", false);
+pref("media.apple.mp4.enabled", false);
 #endif
 #ifdef MOZ_WEBRTC
 pref("media.navigator.enabled", true);
@@ -398,7 +398,7 @@ pref("media.peerconnection.video.max_bitrate", 1000);
 #else
 pref("media.navigator.video.default_width",0);  // adaptive default
 pref("media.navigator.video.default_height",0); // adaptive default
-pref("media.peerconnection.enabled", true);
+pref("media.peerconnection.enabled", false);
 pref("media.peerconnection.video.enabled", true);
 pref("media.navigator.video.max_fs", 12288); // Enough for 2048x1536
 pref("media.navigator.video.max_fr", 60);
@@ -493,16 +493,11 @@ pref("media.webvtt.regions.enabled", false);
 pref("media.track.enabled", false);
 
 // Whether to enable MediaSource support.
-pref("media.mediasource.enabled", true);
-
-pref("media.mediasource.mp4.enabled", true);
-
-#if defined(XP_WIN) || defined(XP_MACOSX) || defined(MOZ_WIDGET_GONK) || defined(MOZ_WIDGET_ANDROID)
+// MediaSource is pretty much hosed on PowerPC OS X, so ... no.
+pref("media.mediasource.enabled", false);
+pref("media.mediasource.mp4.enabled", false);
 pref("media.mediasource.webm.enabled", false);
-#else
-pref("media.mediasource.webm.enabled", true);
-#endif
-pref("media.mediasource.webm.audio.enabled", true);
+pref("media.mediasource.webm.audio.enabled", false);
 
 // Enable new MediaFormatReader architecture for plain webm.
 pref("media.format-reader.webm", true);
@@ -644,10 +639,10 @@ pref("gfx.perf-warnings.enabled", false);
 
 // 0 = Off, 1 = Full, 2 = Tagged Images Only.
 // See eCMSMode in gfx/thebes/gfxPlatform.h
-pref("gfx.color_management.mode", 2);
+pref("gfx.color_management.mode", 1);
 pref("gfx.color_management.display_profile", "");
 pref("gfx.color_management.rendering_intent", 0);
-pref("gfx.color_management.enablev4", false);
+pref("gfx.color_management.enablev4", true);
 
 pref("gfx.downloadable_fonts.enabled", true);
 pref("gfx.downloadable_fonts.fallback_delay", 3000);
@@ -708,10 +703,10 @@ pref("gfx.canvas.azure.backends", "direct2d1.1,direct2d,skia,cairo");
 pref("gfx.content.azure.backends", "direct2d1.1,direct2d,cairo");
 #else
 #ifdef XP_MACOSX
+// TenFourFox is CoreGraphics, all the CoreTime, CoreBeyotches.
 pref("gfx.content.azure.backends", "cg");
-pref("gfx.canvas.azure.backends", "skia");
-// Accelerated cg canvas where available (10.7+)
-pref("gfx.canvas.azure.accelerated", true);
+pref("gfx.canvas.azure.backends", "cg");
+pref("gfx.canvas.azure.accelerated", false);
 #else
 pref("gfx.canvas.azure.backends", "cairo");
 pref("gfx.content.azure.backends", "cairo");
@@ -1139,7 +1134,7 @@ pref("javascript.options.strict.debug",     false);
 #endif
 pref("javascript.options.baselinejit",      true);
 pref("javascript.options.ion",              true);
-pref("javascript.options.asmjs",            true);
+pref("javascript.options.asmjs",            false);
 pref("javascript.options.native_regexp",    true);
 pref("javascript.options.parallel_parsing", true);
 #if !defined(RELEASE_BUILD) && !defined(ANDROID) && !defined(MOZ_B2G) && !defined(XP_IOS)
@@ -1162,7 +1157,7 @@ pref("javascript.options.mem.high_water_mark", 128);
 pref("javascript.options.mem.max", -1);
 pref("javascript.options.mem.gc_per_compartment", true);
 pref("javascript.options.mem.gc_incremental", true);
-pref("javascript.options.mem.gc_incremental_slice_ms", 10);
+pref("javascript.options.mem.gc_incremental_slice_ms", 100); // issue 253
 pref("javascript.options.mem.gc_compacting", true);
 pref("javascript.options.mem.log", false);
 pref("javascript.options.mem.notify", false);
@@ -2516,9 +2511,9 @@ pref("editor.resizing.preserve_ratio",       true);
 pref("editor.positioning.offset",            0);
 
 pref("dom.use_watchdog", true);
-pref("dom.max_chrome_script_run_time", 20);
-pref("dom.max_child_script_run_time", 10);
-pref("dom.max_script_run_time", 10);
+pref("dom.max_chrome_script_run_time", 40); // TenFourFox issue 227
+pref("dom.max_child_script_run_time", 40);
+pref("dom.max_script_run_time", 40);
 
 // If true, ArchiveReader will be enabled
 pref("dom.archivereader.enabled", false);
@@ -4166,7 +4161,8 @@ pref("image.mem.discardable", true);
 pref("image.mem.allow_locking_in_content_processes", true);
 
 // Chunk size for calls to the image decoders
-pref("image.mem.decode_bytes_at_a_time", 16384);
+// Increased for issue 112 (even the larger amount in Fx19 is not enough)
+pref("image.mem.decode_bytes_at_a_time", 200000);
 
 // Minimum timeout for expiring unused images from the surface cache, in
 // milliseconds. This controls how long we store cached temporary surfaces.

@@ -410,9 +410,9 @@ public:
     return SetTokenList(nsGkAtoms::itemtype, aType);
   }
   NS_IMETHOD GetItemId(nsAString& aId) final override {
-    nsString id;
-    GetItemId(id);
-    aId.Assign(id);
+    nsString hid;
+    GetItemId(hid);
+    aId.Assign(hid);
     return NS_OK;
   }
   NS_IMETHOD SetItemId(const nsAString& aId) final override {

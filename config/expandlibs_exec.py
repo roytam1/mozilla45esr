@@ -305,6 +305,8 @@ class SectionFinder(object):
 
 def print_command(out, args):
     print >>out, "Executing: " + " ".join(args)
+    if not hasattr(args, 'tmp'):
+	return
     for tmp in [f for f in args.tmp if os.path.isfile(f)]:
         print >>out, tmp + ":"
         with open(tmp) as file:

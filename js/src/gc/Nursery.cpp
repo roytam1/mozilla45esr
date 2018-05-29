@@ -102,6 +102,7 @@ js::Nursery::init(uint32_t maxNurseryBytes)
     setCurrentChunk(0);
     updateDecommittedRegion();
 
+#if DEBUG
     char* env = getenv("JS_GC_PROFILE_NURSERY");
     if (env) {
         if (0 == strcmp(env, "help")) {
@@ -112,6 +113,7 @@ js::Nursery::init(uint32_t maxNurseryBytes)
         enableProfiling_ = true;
         profileThreshold_ = atoi(env);
     }
+#endif
 
     MOZ_ASSERT(isEnabled());
     return true;
@@ -407,9 +409,15 @@ js::TenuringTracer::TenuringTracer(JSRuntime* rt, Nursery* nursery)
 {
 }
 
+#if DEBUG
 #define TIME_START(name) int64_t timestampStart_##name = enableProfiling_ ? PRMJ_Now() : 0
 #define TIME_END(name) int64_t timestampEnd_##name = enableProfiling_ ? PRMJ_Now() : 0
 #define TIME_TOTAL(name) (timestampEnd_##name - timestampStart_##name)
+#else
+#define TIME_START(name)
+#define TIME_END(name)
+#define TIME_TOTAL(name)
+#endif
 
 void
 js::Nursery::collect(JSRuntime* rt, JS::gcreason::Reason reason, ObjectGroupList* pretenureGroups)
@@ -437,7 +445,9 @@ js::Nursery::collect(JSRuntime* rt, JS::gcreason::Reason reason, ObjectGroupList
 
     TraceMinorGCStart();
 
+#if DEBUG
     int64_t timestampStart_total = PRMJ_Now();
+#endif
 
     AutoTraceSession session(rt, JS::HeapState::MinorCollecting);
     AutoStopVerifyingBarriers av(rt, false);
@@ -568,6 +578,9 @@ js::Nursery::collect(JSRuntime* rt, JS::gcreason::Reason reason, ObjectGroupList
     if (rt->gc.usage.gcBytes() >= rt->gc.tunables.gcMaxBytes())
         disable();
 
+#ifndef DEBUG
+    TraceMinorGCEnd();
+#else
     int64_t totalTime = PRMJ_Now() - timestampStart_total;
     rt->addTelemetry(JS_TELEMETRY_GC_MINOR_US, totalTime);
     rt->addTelemetry(JS_TELEMETRY_GC_MINOR_REASON, reason);
@@ -618,6 +631,7 @@ js::Nursery::collect(JSRuntime* rt, JS::gcreason::Reason reason, ObjectGroupList
         fprintf(stderr, "\n");
 #undef FMT
     }
+#endif
 }
 
 #undef TIME_START

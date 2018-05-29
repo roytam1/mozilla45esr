@@ -509,6 +509,7 @@ BrowserGlue.prototype = {
   },
 
   _handleURLBarTelemetry(input) {
+/*
     if (!input ||
         input.id != "urlbar" ||
         input.inPrivateContext ||
@@ -563,6 +564,7 @@ BrowserGlue.prototype = {
       Cu.reportError("Unknown FX_URLBAR_SELECTED_RESULT_TYPE type: " +
                      actionType);
     }
+*/
   },
 
   _syncSearchEngines: function () {
@@ -706,7 +708,7 @@ BrowserGlue.prototype = {
       const STATE_USER_CLOSED_NOTIFICATION = 4;
 
       let update = function(response) {
-        Services.telemetry.getHistogramById("SLOW_ADDON_WARNING_STATES").add(response);
+        //Services.telemetry.getHistogramById("SLOW_ADDON_WARNING_STATES").add(response);
       }
 
       let complete = false;
@@ -718,7 +720,7 @@ BrowserGlue.prototype = {
         }
         complete = true;
         update(response);
-        Services.telemetry.getHistogramById("SLOW_ADDON_WARNING_RESPONSE_TIME").add(Date.now() - start);
+        //Services.telemetry.getHistogramById("SLOW_ADDON_WARNING_RESPONSE_TIME").add(Date.now() - start);
       };
 
       update(STATE_WARNING_DISPLAYED);
@@ -1049,6 +1051,7 @@ BrowserGlue.prototype = {
   },
 
   _firstWindowTelemetry: function(aWindow) {
+/*
 #ifdef XP_WIN
     let SCALING_PROBE_NAME = "DISPLAY_SCALING_MSWIN";
 #elifdef XP_MACOSX
@@ -1062,6 +1065,7 @@ BrowserGlue.prototype = {
       let scaling = aWindow.devicePixelRatio * 100;
       Services.telemetry.getHistogramById(SCALING_PROBE_NAME).add(scaling);
     }
+*/
   },
 
   // the first browser window has finished initializing
@@ -1324,6 +1328,7 @@ BrowserGlue.prototype = {
       }
 #endif
 
+#ifdef I_LOVE_TELE_AND_I_CANNOT_LIE
       try {
         // Report default browser status on startup to telemetry
         // so we can track whether we are the default.
@@ -1337,6 +1342,7 @@ BrowserGlue.prototype = {
                           .add(promptCount);
       }
       catch (ex) { /* Don't break the default prompt if telemetry is broken. */ }
+#endif
 
       if (willPrompt) {
         Services.tm.mainThread.dispatch(function() {
@@ -1815,6 +1821,7 @@ BrowserGlue.prototype = {
           // available backup compared to that session.
           if (profileLastUse > lastBackupTime) {
             let backupAge = Math.round((profileLastUse - lastBackupTime) / 86400000);
+/*
             // Report the age of the last available backup.
             try {
               Services.telemetry
@@ -1823,6 +1830,7 @@ BrowserGlue.prototype = {
             } catch (ex) {
               Cu.reportError("Unable to report telemetry.");
             }
+*/
 
             if (backupAge > BOOKMARKS_BACKUP_MAX_INTERVAL_DAYS)
               this._bookmarksBackupIdleTime /= 2;
@@ -2687,7 +2695,7 @@ ContentPermissionPrompt.prototype = {
   },
 
   _promptGeo : function(aRequest) {
-    var secHistogram = Services.telemetry.getHistogramById("SECURITY_UI");
+    //var secHistogram = Services.telemetry.getHistogramById("SECURITY_UI");
 
     var message;
 
@@ -2697,7 +2705,7 @@ ContentPermissionPrompt.prototype = {
       action: null,
       expireType: null,
       callback: function() {
-        secHistogram.add(Ci.nsISecurityUITelemetry.WARNING_GEOLOCATION_REQUEST_SHARE_LOCATION);
+        //secHistogram.add(Ci.nsISecurityUITelemetry.WARNING_GEOLOCATION_REQUEST_SHARE_LOCATION);
       },
     }];
 
@@ -2715,7 +2723,7 @@ ContentPermissionPrompt.prototype = {
         action: Ci.nsIPermissionManager.ALLOW_ACTION,
         expireType: null,
         callback: function() {
-          secHistogram.add(Ci.nsISecurityUITelemetry.WARNING_GEOLOCATION_REQUEST_ALWAYS_SHARE);
+          //secHistogram.add(Ci.nsISecurityUITelemetry.WARNING_GEOLOCATION_REQUEST_ALWAYS_SHARE);
         },
       });
 
@@ -2725,12 +2733,12 @@ ContentPermissionPrompt.prototype = {
         action: Ci.nsIPermissionManager.DENY_ACTION,
         expireType: null,
         callback: function() {
-          secHistogram.add(Ci.nsISecurityUITelemetry.WARNING_GEOLOCATION_REQUEST_NEVER_SHARE);
+          //secHistogram.add(Ci.nsISecurityUITelemetry.WARNING_GEOLOCATION_REQUEST_NEVER_SHARE);
         },
       });
     }
 
-    secHistogram.add(Ci.nsISecurityUITelemetry.WARNING_GEOLOCATION_REQUEST);
+    //secHistogram.add(Ci.nsISecurityUITelemetry.WARNING_GEOLOCATION_REQUEST);
 
     this._showPrompt(aRequest, message, "geo", actions, "geolocation",
                      "geo-notification-icon", options);
@@ -2950,11 +2958,15 @@ var DefaultBrowserCheck = {
         if (isDefault || runTime > 600) {
           this._setAsDefaultTimer.cancel();
           this._setAsDefaultTimer = null;
+/*
           Services.telemetry.getHistogramById("BROWSER_SET_DEFAULT_TIME_TO_COMPLETION_SECONDS")
                             .add(runTime);
+*/
         }
+/*
         Services.telemetry.getHistogramById("BROWSER_IS_USER_DEFAULT_ERROR")
                           .add(isDefaultError);
+*/
       }, 1000, Ci.nsITimer.TYPE_REPEATING_SLACK);
     } catch (ex) {
       setAsDefaultError = true;
@@ -2964,10 +2976,12 @@ var DefaultBrowserCheck = {
     // to be inverse of each other, but that is only because this function is
     // called when the browser is set as the default. During startup we record
     // the BROWSER_IS_USER_DEFAULT value without recording BROWSER_SET_USER_DEFAULT_ERROR.
+/*
     Services.telemetry.getHistogramById("BROWSER_IS_USER_DEFAULT")
                       .add(!setAsDefaultError);
     Services.telemetry.getHistogramById("BROWSER_SET_DEFAULT_ERROR")
                       .add(setAsDefaultError);
+*/
   },
 
   _createPopup: function(win, notNowStrings, neverStrings) {
@@ -3080,11 +3094,13 @@ var DefaultBrowserCheck = {
         ShellService.shouldCheckDefaultBrowser = false;
       }
 
+#ifdef I_LOVE_TELE_AND_I_CANNOT_LIE
       try {
         let resultEnum = rv * 2 + shouldAsk.value;
         Services.telemetry.getHistogramById("BROWSER_SET_DEFAULT_RESULT")
                           .add(resultEnum);
       } catch (ex) { /* Don't break if Telemetry is acting up. */ }
+#endif
     }
   },
 

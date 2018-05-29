@@ -134,6 +134,7 @@ class nsNativeTheme : public nsITimerCallback
   // tab:
   bool IsBottomTab(nsIFrame* aFrame);
   bool IsFirstTab(nsIFrame* aFrame);
+  bool IsLastTab(nsIFrame* aFrame);
   
   bool IsHorizontal(nsIFrame* aFrame);
 

@@ -85,13 +85,13 @@ namespace detail {
 // trying to decode the video, we'll skip decoding video up to the next
 // keyframe. We may increase this value for an individual decoder if we
 // encounter video frames which take a long time to decode.
-static const uint32_t LOW_AUDIO_USECS = 300000;
+static const uint32_t LOW_AUDIO_USECS = 1000000;
 
 // If more than this many usecs of decoded audio is queued, we'll hold off
 // decoding more audio. If we increase the low audio threshold (see
 // LOW_AUDIO_USECS above) we'll also increase this value to ensure it's not
 // less than the low audio threshold.
-const int64_t AMPLE_AUDIO_USECS = 1000000;
+const int64_t AMPLE_AUDIO_USECS = 2000000;
 
 } // namespace detail
 
@@ -105,13 +105,13 @@ const int64_t NO_VIDEO_AMPLE_AUDIO_DIVISOR = 8;
 // If we have fewer than LOW_VIDEO_FRAMES decoded frames, and
 // we're not "prerolling video", we'll skip the video up to the next keyframe
 // which is at or after the current playback position.
-static const uint32_t LOW_VIDEO_FRAMES = 2;
+static const uint32_t LOW_VIDEO_FRAMES = 8; 
 
 // Threshold in usecs that used to check if we are low on decoded video.
 // If the last video frame's end time |mDecodedVideoEndTime| is more than
 // |LOW_VIDEO_THRESHOLD_USECS*mPlaybackRate| after the current clock in
 // Advanceframe(), the video decode is lagging, and we skip to next keyframe.
-static const int32_t LOW_VIDEO_THRESHOLD_USECS = 60000;
+static const int32_t LOW_VIDEO_THRESHOLD_USECS = 16000;
 
 // Arbitrary "frame duration" when playing only audio.
 static const int AUDIO_DURATION_USECS = 40000;
@@ -128,7 +128,7 @@ namespace detail {
 // ourselves to be running low on undecoded data. We determine how much
 // undecoded data we have remaining using the reader's GetBuffered()
 // implementation.
-static const int64_t LOW_DATA_THRESHOLD_USECS = 5000000;
+static const int64_t LOW_DATA_THRESHOLD_USECS = 20000000;
 
 // LOW_DATA_THRESHOLD_USECS needs to be greater than AMPLE_AUDIO_USECS, otherwise
 // the skip-to-keyframe logic can activate when we're running low on data.
@@ -174,8 +174,8 @@ static int64_t DurationToUsecs(TimeDuration aDuration) {
   return static_cast<int64_t>(aDuration.ToSeconds() * USECS_PER_S);
 }
 
-static const uint32_t MIN_VIDEO_QUEUE_SIZE = 3;
-static const uint32_t MAX_VIDEO_QUEUE_SIZE = 10;
+static const uint32_t MIN_VIDEO_QUEUE_SIZE = 30;
+static const uint32_t MAX_VIDEO_QUEUE_SIZE = 30;
 static const uint32_t VIDEO_QUEUE_SEND_TO_COMPOSITOR_SIZE = 9999;
 
 static uint32_t sVideoQueueDefaultSize = MAX_VIDEO_QUEUE_SIZE;
@@ -456,6 +456,19 @@ void MediaDecoderStateMachine::DiscardStreamData()
     }
     break;
   }
+
+  // TenFourFox. Don't try to push video frames that are already past.
+  // This just wastes time in the compositor.
+  while(true) {
+  	const MediaData* v = VideoQueue().PeekFront();
+    FrameStatistics& frameStats = *mFrameStats;
+  	if (v && v->mTime < clockTime) {
+  	  RefPtr<MediaData> releaseMe = VideoQueue().PopFront();
+      frameStats.NotifyDecodedFrames(0, 0, 1); // Frame dropped
+  	  continue;
+  	}
+  	break;
+  }
 }
 
 bool MediaDecoderStateMachine::HaveEnoughDecodedAudio(int64_t aAmpleAudioUSecs)
@@ -531,6 +544,30 @@ MediaDecoderStateMachine::NeedToSkipToNextKeyframe()
   if (mAudioCaptured && !HasAudio()) {
     return false;
   }
+
+// TenFourFox. On our slower systems the audio decode thread can run
+// wildly ahead of the video decode thread, which can cause a situation
+// where we get more than one keyframe behind and never catch up. In
+// that situation we should just dump the queued frames if we separate by
+// more than a certain interval because there's no point in displaying
+// them; they'll just hog the compositor which obviously can't keep up.
+// (This situation is mitigated by our extra code in DiscardStreamData(),
+// so this code here mostly runs as an emergency backup.)
+const MediaData* a = AudioQueue().PeekFront();
+const MediaData* v = VideoQueue().PeekFront();
+int64_t videoTime = 0;
+// Use the original AMPLE_AUDIO_USECS, since this is the minimum needed
+// to keep something approaching synchronized and we may well have the
+// audio that far ahead even if we're actually keeping up.
+if (a && v && (a->mTime > ((videoTime = v->mTime) + mozilla::detail::AMPLE_AUDIO_USECS))) {
+	//if (mMediaSink && ((videoTime >> 20) & 1)) mMediaSink->Redraw();
+	//fprintf(stderr, "TenFourFox detected loss of video sync @a=%lld v=%lld; resetting.\n", a->mTime, videoTime);
+  FrameStatistics& frameStats = *mFrameStats;
+  frameStats.NotifyDecodedFrames(0, 0, VideoQueue().GetSize());
+	VideoQueue().Reset();
+  StartBuffering(); // resync, see if we can get more data
+	return true;
+}
 
   // We'll skip the video decode to the next keyframe if we're low on
   // audio, or if we're low on video, provided we're not running low on
@@ -873,7 +910,7 @@ MediaDecoderStateMachine::MaybeFinishDecodeFirstFrame()
 }
 
 void
-MediaDecoderStateMachine::OnVideoDecoded(MediaData* aVideoSample)
+MediaDecoderStateMachine::OnVideoDecoded(MediaData* aVideoSample, TimeStamp aDecodeStartTime)
 {
   MOZ_ASSERT(OnTaskQueue());
   RefPtr<MediaData> video(aVideoSample);
@@ -917,7 +954,7 @@ MediaDecoderStateMachine::OnVideoDecoded(MediaData* aVideoSample)
       if (mReader->IsAsync()) {
         return;
       }
-      TimeDuration decodeTime = TimeStamp::Now() - mVideoDecodeStartTime;
+      TimeDuration decodeTime = TimeStamp::Now() - aDecodeStartTime;
       if (!IsDecodingFirstFrame() &&
           THRESHOLD_FACTOR * DurationToUsecs(decodeTime) > mLowAudioThresholdUsecs &&
           !HasLowUndecodedData())
@@ -1757,24 +1794,31 @@ MediaDecoderStateMachine::RequestVideoData()
   // Time the video decode, so that if it's slow, we can increase our low
   // audio threshold to reduce the chance of an audio underrun while we're
   // waiting for a video decode to complete.
-  mVideoDecodeStartTime = TimeStamp::Now();
+  TimeStamp videoDecodeStartTime = TimeStamp::Now();
 
   bool skipToNextKeyFrame = mSentFirstFrameLoadedEvent &&
     NeedToSkipToNextKeyframe();
-  int64_t currentTime = mState == DECODER_STATE_SEEKING ? 0 : GetMediaTime();
+  int64_t currentTime =
+    mState == DECODER_STATE_SEEKING || !mSentFirstFrameLoadedEvent
+      ? 0 : GetMediaTime() + StartTime();
 
   SAMPLE_LOG("Queueing video task - queued=%i, decoder-queued=%o, skip=%i, time=%lld",
              VideoQueue().GetSize(), mReader->SizeOfVideoQueueInFrames(), skipToNextKeyFrame,
              currentTime);
 
+  RefPtr<MediaDecoderStateMachine> self = this;
   if (mSentFirstFrameLoadedEvent) {
     mVideoDataRequest.Begin(
       InvokeAsync(DecodeTaskQueue(), mReader.get(), __func__,
                   &MediaDecoderReader::RequestVideoData,
                   skipToNextKeyFrame, currentTime)
-      ->Then(OwnerThread(), __func__, this,
-             &MediaDecoderStateMachine::OnVideoDecoded,
-             &MediaDecoderStateMachine::OnVideoNotDecoded));
+      ->Then(OwnerThread(), __func__,
+             [self, videoDecodeStartTime] (MediaData* aVideoSample) {
+               self->OnVideoDecoded(aVideoSample, videoDecodeStartTime);
+             },
+             [self] (MediaDecoderReader::NotDecodedReason aReason) {
+               self->OnVideoNotDecoded(aReason);
+             }));
   } else {
     mVideoDataRequest.Begin(
       InvokeAsync(DecodeTaskQueue(), mReader.get(), __func__,
@@ -1784,9 +1828,13 @@ MediaDecoderStateMachine::RequestVideoData()
              &StartTimeRendezvous::ProcessFirstSample<VideoDataPromise, MediaData::VIDEO_DATA>,
              &StartTimeRendezvous::FirstSampleRejected<MediaData::VIDEO_DATA>)
       ->CompletionPromise()
-      ->Then(OwnerThread(), __func__, this,
-             &MediaDecoderStateMachine::OnVideoDecoded,
-             &MediaDecoderStateMachine::OnVideoNotDecoded));
+      ->Then(OwnerThread(), __func__,
+             [self, videoDecodeStartTime] (MediaData* aVideoSample) {
+               self->OnVideoDecoded(aVideoSample, videoDecodeStartTime);
+             },
+             [self] (MediaDecoderReader::NotDecodedReason aReason) {
+               self->OnVideoNotDecoded(aReason);
+             }));
   }
 }
 
@@ -2661,6 +2709,13 @@ void MediaDecoderStateMachine::UpdateNextFrameStatus()
 
   if (status != mNextFrameStatus) {
     DECODER_LOG("Changed mNextFrameStatus to %s", statusString);
+    // bug 1298594
+    if(status == MediaDecoderOwner::NEXT_FRAME_UNAVAILABLE_BUFFERING ||
+       status == MediaDecoderOwner::NEXT_FRAME_UNAVAILABLE) {
+      // Ensure currentTime is up to date prior updating mNextFrameStatus so that
+      // the MediaDecoderOwner fire events at correct currentTime.
+      UpdatePlaybackPositionPeriodically();
+    }
   }
 
   mNextFrameStatus = status;

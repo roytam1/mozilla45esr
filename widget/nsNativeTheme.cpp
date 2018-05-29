@@ -265,6 +265,20 @@ nsNativeTheme::GetIndeterminate(nsIFrame* aFrame)
   return false;
 }
 
+// backout bug 672050
+bool
+nsNativeTheme::IsLastTab(nsIFrame* aFrame)
+{
+  if (!aFrame)
+    return false;
+
+  while ((aFrame = aFrame->GetNextSibling())) {
+    if (aFrame->GetRect().width > 0 && aFrame->GetContent()->NodeInfo()->NameAtom() == nsGkAtoms::tab)
+      return false;
+  }
+  return true;
+}
+
 bool
 nsNativeTheme::IsWidgetStyled(nsPresContext* aPresContext, nsIFrame* aFrame,
                               uint8_t aWidgetType)

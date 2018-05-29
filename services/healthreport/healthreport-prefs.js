@@ -18,9 +18,10 @@ pref("datareporting.healthreport.nextDataSubmissionTime", "0");
 pref("datareporting.healthreport.pendingDeleteRemoteData", false);
 
 // Health Report is enabled by default on all channels.
-pref("datareporting.healthreport.uploadEnabled", true);
+// But we're TenFourFox. So f'all that, we've gotta get on with these.
+pref("datareporting.healthreport.uploadEnabled", false);
 
-pref("datareporting.healthreport.service.enabled", true);
+pref("datareporting.healthreport.service.enabled", false);
 pref("datareporting.healthreport.service.loadDelayMsec", 10000);
 pref("datareporting.healthreport.service.loadDelayFirstRunMsec", 60000);
 

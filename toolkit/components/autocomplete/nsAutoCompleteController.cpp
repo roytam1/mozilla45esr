@@ -799,7 +799,11 @@ nsAutoCompleteController::OnUpdateSearchResult(nsIAutoCompleteSearch *aSearch, n
 NS_IMETHODIMP
 nsAutoCompleteController::OnSearchResult(nsIAutoCompleteSearch *aSearch, nsIAutoCompleteResult* aResult)
 {
+/* BADFIX??? */
+/*
   MOZ_ASSERT(mSearchesOngoing > 0 && mSearches.Contains(aSearch));
+*/
+MOZ_ASSERT(mSearches.Contains(aSearch));
 
   // If this is the first search result we are processing
   // we should clear out the previously cached results.
@@ -813,6 +817,7 @@ nsAutoCompleteController::OnSearchResult(nsIAutoCompleteSearch *aSearch, nsIAuto
     aResult->GetSearchResult(&result);
   }
 
+if (mSearchesOngoing) // BADFIX???
   // If our results are incremental, the search is still ongoing.
   if (result != nsIAutoCompleteResult::RESULT_SUCCESS_ONGOING &&
       result != nsIAutoCompleteResult::RESULT_NOMATCH_ONGOING) {

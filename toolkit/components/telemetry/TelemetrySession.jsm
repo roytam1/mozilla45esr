@@ -302,7 +302,7 @@ var TelemetryScheduler = {
     this._lastDailyPingTime = now.getTime();
     this._lastSessionCheckpointTime = now.getTime();
     this._rescheduleTimeout();
-    idleService.addIdleObserver(this, IDLE_TIMEOUT_SECONDS);
+    //idleService.addIdleObserver(this, IDLE_TIMEOUT_SECONDS);
   },
 
   /**

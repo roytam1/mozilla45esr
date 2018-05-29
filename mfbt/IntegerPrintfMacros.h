@@ -49,4 +49,22 @@
 #  define PRIXPTR "X"  /* uintptr_t */
 #endif
 
+/* Fix issues with the 10.4 SDK using weird printf macros but not working
+   properly with gcc-4.8. This causes failures in tests/coverage/simple.js
+   and other less visible places (i.e., using %qu instead of %llu). */
+
+#define __104PRI_64_LENGTH_MODIFIER__ "ll"
+#undef PRId64
+#  define PRId64        __104PRI_64_LENGTH_MODIFIER__ "d"
+#undef PRIi64
+#  define PRIi64        __104PRI_64_LENGTH_MODIFIER__ "i"
+#undef PRIo64
+#  define PRIo64        __104PRI_64_LENGTH_MODIFIER__ "o"
+#undef PRIu64
+#  define PRIu64        __104PRI_64_LENGTH_MODIFIER__ "u"
+#undef PRIx64
+#  define PRIx64        __104PRI_64_LENGTH_MODIFIER__ "x"
+#undef PRIX64
+#  define PRIX64        __104PRI_64_LENGTH_MODIFIER__ "X"
+
 #endif  /* mozilla_IntegerPrintfMacros_h_ */

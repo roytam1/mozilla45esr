@@ -54,13 +54,13 @@ class IDMap {
   // the list. The caller either must generate all unique IDs itself and use
   // this function, or allow this object to generate IDs and call Add. These
   // two methods may not be mixed, or duplicate IDs may be generated
-  void AddWithID(T* data, int32_t id) {
-    DCHECK(data_.find(id) == data_.end()) << "Inserting duplicate item";
-    data_[id] = data;
+  void AddWithID(T* data, int32_t cid) {
+    DCHECK(data_.find(cid) == data_.end()) << "Inserting duplicate item";
+    data_[cid] = data;
   }
 
-  void Remove(int32_t id) {
-    iterator i = data_.find(id);
+  void Remove(int32_t cid) {
+    iterator i = data_.find(cid);
     if (i == data_.end()) {
       NOTREACHED() << "Attempting to remove an item not in the list";
       return;
@@ -84,8 +84,8 @@ class IDMap {
     return false;
   }
 
-  T* Lookup(int32_t id) const {
-    const_iterator i = data_.find(id);
+  T* Lookup(int32_t cid) const {
+    const_iterator i = data_.find(cid);
     if (i == data_.end())
       return NULL;
     return i->second;

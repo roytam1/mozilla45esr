@@ -806,6 +806,24 @@ nsPlacesAutoComplete.prototype = {
     if (aSearchOngoing) {
       resultCode += "_ONGOING";
     }
+
+/* 10.4Fx issue 21. This makes me absolutely nauseous just writing this
+   because this is about the most naked, improper wallpaper job I've ever
+   written. But it works. In short, NEVER return RESULT_NOMATCH -- if we
+   are about to do that, forge a single stub match to make a blank box and
+   _SUCCESS, and this solves the problem. I am going to take a shower and
+   try to scrub the disgust from my heaving, vomiting body. */
+
+    if (resultCode == "RESULT_NOMATCH") { // well, shoot. let's fudge.
+      this._result.appendMatch(
+        "", // blank URL
+        "", // blank title
+        "", // no favicon
+        "favicon" // but use a favicon style -- thus a blank drop-down
+      );
+      resultCode = "RESULT_SUCCESS";
+    } // end issue
+
     result.setSearchResult(Ci.nsIAutoCompleteResult[resultCode]);
     this._listener.onSearchResult(this, result);
     if (this._telemetryStartTime) {

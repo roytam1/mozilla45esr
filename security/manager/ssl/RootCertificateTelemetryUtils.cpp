@@ -58,7 +58,7 @@ RootCABinNumber(const SECItem* cert)
            ("pkpinTelem: First bytes %02hx %02hx %02hx %02hx\n",
             digest.get().data[0], digest.get().data[1], digest.get().data[2], digest.get().data[3]));
 
-  if (mozilla::BinarySearchIf(ROOT_TABLE, 0, ArrayLength(ROOT_TABLE),
+  if (mozilla::BinarySearchIf(ROOT_TABLE, 0, mozilla::ArrayLength(ROOT_TABLE),
           BinaryHashSearchArrayComparator(
             reinterpret_cast<const uint8_t*>(digest.get().data), digest.get().len),
          &idx)) {

@@ -636,8 +636,8 @@ JSXrayTraits::delete_(JSContext* cx, HandleObject wrapper, HandleId id, ObjectOp
 
 bool
 JSXrayTraits::defineProperty(JSContext* cx, HandleObject wrapper, HandleId id,
-                             Handle<JSPropertyDescriptor> desc,
-                             Handle<JSPropertyDescriptor> existingDesc,
+                             JS::Handle<JSPropertyDescriptor> desc,
+                             JS::Handle<JSPropertyDescriptor> existingDesc,
                              ObjectOpResult& result,
                              bool* defined)
 {
@@ -1473,8 +1473,8 @@ XPCWrappedNativeXrayTraits::resolveOwnProperty(JSContext* cx, const Wrapper& jsW
 
 bool
 XPCWrappedNativeXrayTraits::defineProperty(JSContext* cx, HandleObject wrapper, HandleId id,
-                                           Handle<JSPropertyDescriptor> desc,
-                                           Handle<JSPropertyDescriptor> existingDesc,
+                                           JS::Handle<JSPropertyDescriptor> desc,
+                                           JS::Handle<JSPropertyDescriptor> existingDesc,
                                            JS::ObjectOpResult& result, bool* defined)
 {
     *defined = false;
@@ -1633,8 +1633,8 @@ DOMXrayTraits::resolveOwnProperty(JSContext* cx, const Wrapper& jsWrapper, Handl
 
 bool
 DOMXrayTraits::defineProperty(JSContext* cx, HandleObject wrapper, HandleId id,
-                              Handle<JSPropertyDescriptor> desc,
-                              Handle<JSPropertyDescriptor> existingDesc,
+                              JS::Handle<JSPropertyDescriptor> desc,
+                              JS::Handle<JSPropertyDescriptor> existingDesc,
                               JS::ObjectOpResult& result, bool* defined)
 {
     // Check for an indexed property on a Window.  If that's happening, do
@@ -2032,7 +2032,7 @@ RecreateLostWaivers(JSContext* cx, const JSPropertyDescriptor* orig,
 template <typename Base, typename Traits>
 bool
 XrayWrapper<Base, Traits>::defineProperty(JSContext* cx, HandleObject wrapper,
-                                          HandleId id, Handle<JSPropertyDescriptor> desc,
+                                          HandleId id, JS::Handle<JSPropertyDescriptor> desc,
                                           ObjectOpResult& result) const
 {
     assertEnteredPolicy(cx, wrapper, id, BaseProxyHandler::SET);

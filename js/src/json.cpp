@@ -375,6 +375,10 @@ JO(JSContext* cx, HandleObject obj, StringifyContext* scx)
     bool wroteMember = false;
     RootedId id(cx);
     for (size_t i = 0, len = propertyList.length(); i < len; i++) {
+// bug 1257164
+        if (!CheckForInterrupt(cx))
+            return false;
+
         /*
          * Steps 8a-8b.  Note that the call to Str is broken up into 1) getting
          * the property; 2) processing for toJSON, calling the replacer, and
@@ -454,6 +458,10 @@ JA(JSContext* cx, HandleObject obj, StringifyContext* scx)
         /* Steps 7-10. */
         RootedValue outputValue(cx);
         for (uint32_t i = 0; i < length; i++) {
+// bug 1257164
+        if (!CheckForInterrupt(cx))
+            return false;
+
             /*
              * Steps 8a-8c.  Again note how the call to the spec's Str method
              * is broken up into getting the property, running it past toJSON
@@ -731,6 +739,10 @@ Walk(JSContext* cx, HandleObject holder, HandleId name, HandleValue reviver, Mut
             RootedId id(cx);
             RootedValue newElement(cx);
             for (uint32_t i = 0; i < length; i++) {
+// bug 1257164
+                if (!CheckForInterrupt(cx))
+                    return false;
+
                 if (!IndexToId(cx, i, &id))
                     return false;
 
@@ -761,6 +773,10 @@ Walk(JSContext* cx, HandleObject holder, HandleId name, HandleValue reviver, Mut
             RootedId id(cx);
             RootedValue newElement(cx);
             for (size_t i = 0, len = keys.length(); i < len; i++) {
+// bug 1257164
+                if (!CheckForInterrupt(cx))
+                    return false;
+
                 /* Step 2b(ii)(1). */
                 id = keys[i];
                 if (!Walk(cx, obj, id, reviver, &newElement))

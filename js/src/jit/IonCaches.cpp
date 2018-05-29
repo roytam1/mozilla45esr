@@ -4103,7 +4103,7 @@ GenerateGetTypedOrUnboxedArrayElement(JSContext* cx, MacroAssembler& masm,
 
     if (IsAnyTypedArray(array)) {
         // Guard on the initialized length.
-        Address length(object, TypedArrayObject::lengthOffset());
+        Address length(object, TypedArrayObject::lengthOffset() + NUNBOX32_PAYLOAD_OFFSET);
         masm.branch32(Assembler::BelowOrEqual, length, indexReg, &failures);
 
         // Save the object register on the stack in case of failure.
@@ -4928,6 +4928,62 @@ IsCacheableNameCallGetter(HandleObject scopeChain, HandleObject obj, HandleObjec
 }
 
 bool
+NameIC::attachTypeOfNoProperty(JSContext* cx, HandleScript outerScript, IonScript* ion,
+                               HandleObject scopeChain)
+{
+    MacroAssembler masm(cx, ion, outerScript, profilerLeavePc_);
+    Label failures;
+    StubAttacher attacher(*this);
+
+    Register scratchReg = outputReg().valueReg().scratchReg();
+
+    masm.movePtr(scopeChainReg(), scratchReg);
+
+    // Generate scope chain guards.
+    // Since the property was not defined on any object, iterate until reaching the global.
+    JSObject* tobj = scopeChain;
+    while (true) {
+        GenerateScopeChainGuard(masm, tobj, scratchReg, nullptr, &failures);
+
+        if (tobj->is<GlobalObject>())
+            break;
+
+        // Load the next link.
+        tobj = &tobj->as<ScopeObject>().enclosingScope();
+        masm.extractObject(Address(scratchReg, ScopeObject::offsetOfEnclosingScope()), scratchReg);
+    }
+
+    masm.moveValue(UndefinedValue(), outputReg().valueReg());
+    attacher.jumpRejoin(masm);
+
+    masm.bind(&failures);
+    attacher.jumpNextStub(masm);
+
+    return linkAndAttachStub(cx, masm, attacher, ion, "generic",
+                             JS::TrackedOutcome::ICNameStub_TypeOfNoProperty);
+}
+
+static bool
+IsCacheableNameNoProperty(HandleObject scopeChain, HandleObject obj,
+                          HandleObject holder, HandleShape shape, jsbytecode* pc,
+                          NameIC& cache)
+{
+    if (cache.isTypeOf() && !shape) {
+        MOZ_ASSERT(!obj);
+        MOZ_ASSERT(!holder);
+        MOZ_ASSERT(scopeChain);
+
+        // Assert those extra things checked by IsCacheableNoProperty().
+        MOZ_ASSERT(cache.outputReg().hasValue());
+        MOZ_ASSERT(pc != nullptr);
+
+        return true;
+    }
+
+    return false;
+}
+
+bool
 NameIC::update(JSContext* cx, HandleScript outerScript, size_t cacheIndex, HandleObject scopeChain,
                MutableHandleValue vp)
 {
@@ -4969,6 +5025,9 @@ NameIC::update(JSContext* cx, HandleScript outerScript, size_t cacheIndex, Handl
             {
                 return false;
             }
+        } else if (IsCacheableNameNoProperty(scopeChain, obj, holder, shape, pc, cache)) {
+            if (!cache.attachTypeOfNoProperty(cx, outerScript, ion, scopeChain))
+                return false;
         }
     }
 

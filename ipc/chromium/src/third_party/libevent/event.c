@@ -2551,7 +2551,14 @@ insert_common_timeout_inorder(struct common_timeout_list *ctl,
 	 * there's some wacky threading issue going on, we do a search from
 	 * the end of 'ev' to find the right insertion point.
 	 */
-	TAILQ_FOREACH_REVERSE(e, &ctl->events,
+
+// 10.4's queue.h is wrong here.
+#define SM_TAILQ_FOREACH_REVERSE(var, head, headname, field)		\
+	for((var) = TAILQ_LAST(head, headname);			\
+	    (var) != NULL ;				\
+	    (var) = TAILQ_PREV(var, headname, field))
+
+	SM_TAILQ_FOREACH_REVERSE(e, &ctl->events,
 	    event_list, ev_timeout_pos.ev_next_with_common_timeout) {
 		/* This timercmp is a little sneaky, since both ev and e have
 		 * magic values in tv_usec.  Fortunately, they ought to have

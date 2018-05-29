@@ -13,7 +13,8 @@
 #include "mozilla/Attributes.h"
 #include "mozilla/FloatingPoint.h"
 
-#include <inttypes.h>
+// Incorporate our local patches for inttypes.h.
+#include "mozilla/IntegerPrintfMacros.h"
 
 namespace mozilla {
 namespace non_crypto {

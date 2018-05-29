@@ -1320,6 +1320,8 @@ gfxFontFamily::FindAllFontsForStyle(const gfxFontStyle& aFontStyle,
         uint8_t faceIndex = (wantItalic ? kItalicMask : 0) |
                             (wantBold ? kBoldMask : 0);
 
+// Paranoia checks here
+if (faceIndex < mAvailableFonts.Length()) {
         // if the desired style is available, return it directly
         fe = mAvailableFonts[faceIndex];
         if (fe) {
@@ -1327,6 +1329,7 @@ gfxFontFamily::FindAllFontsForStyle(const gfxFontStyle& aFontStyle,
             aFontEntryList.AppendElement(fe);
             return;
         }
+}
 
         // order to check fallback faces in a simple family, depending on requested style
         static const uint8_t simpleFallbacks[4][3] = {
@@ -1339,6 +1342,7 @@ gfxFontFamily::FindAllFontsForStyle(const gfxFontStyle& aFontStyle,
 
         for (uint8_t trial = 0; trial < 3; ++trial) {
             // check remaining faces in order of preference to find the first that actually exists
+            if (order[trial] < mAvailableFonts.Length())
             fe = mAvailableFonts[order[trial]];
             if (fe) {
                 aNeedsSyntheticBold =

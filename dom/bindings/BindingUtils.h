@@ -1783,11 +1783,12 @@ GetCallbackFromCallbackObject(T& aObj)
   return GetCallbackFromCallbackObjectHelper<T>::Get(aObj);
 }
 
+// id is a reserved word to our gcc.
 static inline bool
-AtomizeAndPinJSString(JSContext* cx, jsid& id, const char* chars)
+AtomizeAndPinJSString(JSContext* cx, jsid& jid, const char* chars)
 {
   if (JSString *str = ::JS_AtomizeAndPinString(cx, chars)) {
-    id = INTERNED_STRING_TO_JSID(cx, str);
+    jid = INTERNED_STRING_TO_JSID(cx, str);
     return true;
   }
   return false;
@@ -3106,26 +3107,26 @@ CreateGlobal(JSContext* aCx, T* aNative, nsWrapperCache* aCache,
  */
 class PinnedStringId
 {
-  jsid id;
+  jsid jid;
 
  public:
-  PinnedStringId() : id(JSID_VOID) {}
+  PinnedStringId() : jid(JSID_VOID) {}
 
   bool init(JSContext *cx, const char *string) {
     JSString* str = JS_AtomizeAndPinString(cx, string);
     if (!str)
       return false;
-    id = INTERNED_STRING_TO_JSID(cx, str);
+    jid = INTERNED_STRING_TO_JSID(cx, str);
     return true;
   }
 
   operator const jsid& () {
-    return id;
+    return jid;
   }
 
   operator JS::Handle<jsid> () {
     /* This is safe because we have pinned the string. */
-    return JS::Handle<jsid>::fromMarkedLocation(&id);
+    return JS::Handle<jsid>::fromMarkedLocation(&jid);
   }
 };
 

@@ -91,8 +91,19 @@ BaselineCompiler::compile()
     AutoTraceLog logScript(logger, scriptEvent);
     AutoTraceLog logCompile(logger, TraceLogger_BaselineCompilation);
 
+#if(0)
     if (!script->ensureHasTypes(cx) || !script->ensureHasAnalyzedArgsUsage(cx))
         return Method_Error;
+#else
+    // This makes a non-trivial difference in Baseline-heavy code.
+    if (!script->ensureHasTypes(cx))
+        return Method_Error;
+
+    if (script->argumentsHasVarBinding()) {
+        if (!script->ensureHasAnalyzedArgsUsage(cx))
+            return Method_Error;
+    }
+#endif
 
     // When a Debugger set the collectCoverageInfo flag, we recompile baseline
     // scripts without entering the interpreter again. We have to create the

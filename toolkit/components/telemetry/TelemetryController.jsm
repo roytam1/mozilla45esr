@@ -653,7 +653,7 @@ var Impl = {
    * @return {Boolean} True if Telemetry is allowed to record at least base (FHR) data,
    *                   false otherwise.
    */
-  enableTelemetryRecording: function enableTelemetryRecording() {
+  enableTelemetryRecording: function enableTelemetryRecording() { return false;
     // The thumbnail service also runs in a content process, even with e10s off.
     // We need to check if e10s is on so we don't submit child payloads for it.
     // We still need xpcshell child tests to work, so we skip this if test mode is enabled.

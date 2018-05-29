@@ -23,6 +23,9 @@
 #include "opentype-sanitiser.h"
 #include "ots-memory-stream.h"
 
+#include "nsICryptoHash.h"
+#include "nsNetCID.h"
+
 using namespace mozilla;
 
 mozilla::LogModule*
@@ -51,11 +54,11 @@ public:
         free(mPtr);
     }
 
-    // return the buffer, and give up ownership of it
-    // so the caller becomes responsible to call free
-    // when finished with it
+    // Return the buffer, resized to fit its contents (as it may have been
+    // over-allocated during growth), and give up ownership of it so the
+    // caller becomes responsible to call free() when finished with it.
     void* forget() {
-        void* p = mPtr;
+        void* p = moz_xrealloc(mPtr, mOff);
         mPtr = nullptr;
         return p;
     }
@@ -176,7 +179,7 @@ public:
     virtual ots::TableAction GetTableAction(uint32_t aTag) override {
         // Preserve Graphite, color glyph and SVG tables
         if (
-#ifdef RELEASE_BUILD // For Beta/Release, also allow OT Layout tables through
+#if(1) // def RELEASE_BUILD // For Beta/Release, also allow OT Layout tables through
                      // unchecked, and rely on harfbuzz to handle them safely.
             aTag == TRUETYPE_TAG('G', 'D', 'E', 'F') ||
             aTag == TRUETYPE_TAG('G', 'P', 'O', 'S') ||
@@ -246,14 +249,14 @@ gfxUserFontEntry::SanitizeOpenTypeData(const uint8_t* aData,
     ExpandingMemoryStream output(lengthHint, 1024 * 1024 * 256);
 
     gfxOTSContext otsContext(this);
-
-    if (otsContext.Process(&output, aData, aLength)) {
-        aSaneLength = output.Tell();
-        return static_cast<uint8_t*>(output.forget());
-    } else {
+    if (!otsContext.Process(&output, aData, aLength)) {
+        // Failed to decode/sanitize the font, so discard it.
         aSaneLength = 0;
         return nullptr;
     }
+
+    aSaneLength = output.Tell();
+    return static_cast<const uint8_t*>(output.forget());
 }
 
 void
@@ -376,6 +379,47 @@ CopyWOFFMetadata(const uint8_t* aFontData,
     *aMetaOrigLen = woff->metaOrigLen;
 }
 
+// TenFourFox issue 311: check for bad data: fonts.
+static nsresult
+HashDataFontURL(nsIURI *aFontURI)
+{
+    nsCString spec;
+    nsresult rv = aFontURI->GetAsciiSpec(spec);
+    if (NS_FAILED(rv) || spec.Length() < 8)
+        return NS_ERROR_FAILURE; // can't be valid
+
+    // Hash the data URL.
+    nsAutoCString fullHash;
+    nsCOMPtr<nsICryptoHash> crypto = do_CreateInstance(NS_CRYPTO_HASH_CONTRACTID, &rv);
+    NS_ENSURE_SUCCESS(rv, rv);
+    rv = crypto->Init(nsICryptoHash::SHA1);
+    NS_ENSURE_SUCCESS(rv, rv);
+    rv = crypto->Update(reinterpret_cast<const uint8_t*>(spec.BeginReading()),
+                        spec.Length());
+    NS_ENSURE_SUCCESS(rv, rv);
+    rv = crypto->Finish(true, fullHash);
+    if (NS_SUCCEEDED(rv)) {
+#if(0)
+        fprintf(stderr, "URL: %s -> hash: %s\n", spec.get(), fullHash.get());
+#endif
+        if (0 ||
+            fullHash.Equals("7bEdowSouswJQEDqXZ1HyJ/nAVU=") ||
+            fullHash.Equals("5L3jz1VLjOoygPOTw9UX/2M+Wh4=") ||
+            fullHash.Equals("ViO/mt90XnXJm7kgYJNIa4w2u7M=") ||
+            fullHash.Equals("s3Hh0b18aP3UvzzEIuczok5AKOQ=") ||
+            fullHash.Equals("bw95WsPe1C3i6ywQkwLd7tZUVT4=") ||
+            fullHash.Equals("YFKGFitMqlw1z0z+kITI2oiGjUM=") ||
+            fullHash.Equals("d0fwa3E00upl5Vj+C8K+NFhfiNQ=") ||
+        0) {
+            fprintf(stderr, "Warning: TenFourFox blocking ATSUI-incompatible data: font (with SHA-1 URL hash of %s).\n", fullHash.get());
+            return NS_ERROR_FAILURE; // bad font
+        }
+        return NS_OK;
+    }
+    fprintf(stderr, "hash failed: %08x\n", (uint32_t)rv);
+    return rv;
+}
+
 void
 gfxUserFontEntry::LoadNextSrc()
 {
@@ -494,6 +538,8 @@ gfxUserFontEntry::LoadNextSrc()
                         uint32_t bufferLength = 0;
 
                         // sync load font immediately
+                        rv = HashDataFontURL(currSrc.mURI);
+                        if (NS_SUCCEEDED(rv))
                         rv = mFontSet->SyncLoadFontData(this, &currSrc, buffer,
                                                         bufferLength);
 
@@ -682,6 +728,7 @@ gfxUserFontEntry::LoadPlatformFont(const uint8_t* aFontData, uint32_t& aLength)
                  NS_ConvertUTF16toUTF8(mFamilyName).get(),
                  this, uint32_t(mFontSet->mGeneration), fontCompressionRatio));
         }
+        fe->AddRef(); // BADFIX???
         mPlatformFontEntry = fe;
         SetLoadState(STATUS_LOADED);
         gfxUserFontSet::UserFontCache::CacheFont(fe);
@@ -775,6 +822,7 @@ gfxUserFontEntry::GetUserFontSets(nsTArray<gfxUserFontSet*>& aResult)
 gfxUserFontSet::gfxUserFontSet()
     : mFontFamilies(4),
       mLocalRulesUsed(false),
+      mRebuildLocalRules(false),
       mDownloadCount(0),
       mDownloadSize(0)
 {
@@ -944,6 +992,7 @@ void
 gfxUserFontSet::RebuildLocalRules()
 {
     if (mLocalRulesUsed) {
+        mRebuildLocalRules = true;
         DoRebuildUserFontSet();
     }
 }

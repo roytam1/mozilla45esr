@@ -1837,6 +1837,8 @@ ScrollFrameHelper::ScrollFrameHelper(nsContainerFrame* aOuter,
   , mLastPos(-1, -1)
   , mScrollPosForLayerPixelAlignment(-1, -1)
   , mLastUpdateImagesPos(-1, -1)
+  , mHadDisplayPortAtLastImageUpdate(false)
+  , mDisplayPortAtLastImageUpdate()
   , mNeverHasVerticalScrollbar(false)
   , mNeverHasHorizontalScrollbar(false)
   , mHasVerticalScrollbar(false)
@@ -2477,6 +2479,23 @@ ScrollFrameHelper::ScheduleSyntheticMouseMove()
 }
 
 void
+ScrollFrameHelper::NotifyImageVisibilityUpdate()
+{
+  mLastUpdateImagesPos = GetScrollPosition();
+  mHadDisplayPortAtLastImageUpdate =
+    nsLayoutUtils::GetDisplayPort(mOuter->GetContent(), &mDisplayPortAtLastImageUpdate);
+}
+
+bool
+ScrollFrameHelper::GetDisplayPortAtLastImageVisibilityUpdate(nsRect* aDisplayPort)
+{
+  if (mHadDisplayPortAtLastImageUpdate) {
+    *aDisplayPort = mDisplayPortAtLastImageUpdate;
+  }
+  return mHadDisplayPortAtLastImageUpdate;
+}
+
+void
 ScrollFrameHelper::ScrollToImpl(nsPoint aPt, const nsRect& aRange, nsIAtom* aOrigin)
 {
   if (aOrigin == nullptr) {
@@ -2528,10 +2547,6 @@ ScrollFrameHelper::ScrollToImpl(nsPoint aPt, const nsRect& aRange, nsIAtom* aOri
     needImageVisibilityUpdate = true;
   }
 
-  if (needImageVisibilityUpdate) {
-    presContext->PresShell()->ScheduleImageVisibilityUpdate();
-  }
-
   // notify the listeners.
   for (uint32_t i = 0; i < mListeners.Length(); i++) {
     mListeners[i]->ScrollPositionWillChange(pt.x, pt.y);
@@ -2549,6 +2564,7 @@ ScrollFrameHelper::ScrollToImpl(nsPoint aPt, const nsRect& aRange, nsIAtom* aOri
 
   ScrollVisual();
 
+#if(0) // this won't ever happen
   if (LastScrollOrigin() == nsGkAtoms::apz) {
     // If this was an apz scroll and the displayport (relative to the
     // scrolled frame) hasn't changed, then this won't trigger
@@ -2562,10 +2578,19 @@ ScrollFrameHelper::ScrollToImpl(nsPoint aPt, const nsRect& aRange, nsIAtom* aOri
 
     if (!displayPort.IsEqualEdges(oldDisplayPort)) {
       mOuter->SchedulePaint();
+
+      if (needImageVisibilityUpdate) {
+        presContext->PresShell()->ScheduleImageVisibilityUpdate();
+      }
     }
   } else {
+#endif
     mOuter->SchedulePaint();
-  }
+
+    if (needImageVisibilityUpdate) {
+      presContext->PresShell()->ScheduleImageVisibilityUpdate();
+    }
+//  }
 
   if (mOuter->ChildrenHavePerspective()) {
     // The overflow areas of descendants may depend on the scroll position,
@@ -2884,7 +2909,7 @@ ScrollFrameHelper::BuildDisplayList(nsDisplayListBuilder*   aBuilder,
                                     const nsDisplayListSet& aLists)
 {
   if (aBuilder->IsForImageVisibility()) {
-    mLastUpdateImagesPos = GetScrollPosition();
+    NotifyImageVisibilityUpdate();
   }
 
   mOuter->DisplayBorderBackgroundOutline(aBuilder, aLists);

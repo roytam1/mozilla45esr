@@ -35,7 +35,7 @@ this.TelemetryStopwatch = {
    *         timer already exists, it can't be started again, and the existing
    *         one will be cleared in order to avoid measurements errors.
    */
-  start: function(aHistogram, aObj) {
+  start: function(aHistogram, aObj) { return;
     if (!validTypes(aHistogram, aObj))
       return false;
 
@@ -74,7 +74,7 @@ this.TelemetryStopwatch = {
    *
    * @return true if the timer exist and it was cleared, false otherwise.
    */
-  cancel: function ts_cancel(aHistogram, aObj) {
+  cancel: function ts_cancel(aHistogram, aObj) { return;
     if (!validTypes(aHistogram, aObj))
       return false;
 
@@ -103,7 +103,7 @@ this.TelemetryStopwatch = {
    *
    * @return time in milliseconds or -1 if the stopwatch was not found.
    */
-  timeElapsed: function(aHistogram, aObj) {
+  timeElapsed: function(aHistogram, aObj) { return 0;
     if (!validTypes(aHistogram, aObj))
       return -1;
     let timers = aObj
@@ -132,7 +132,7 @@ this.TelemetryStopwatch = {
    * @return true if the timer was succesfully stopped and the data was
    *         added to the histogram, false otherwise.
    */
-  finish: function(aHistogram, aObj) {
+  finish: function(aHistogram, aObj) { return true;
     if (!validTypes(aHistogram, aObj))
       return false;
 

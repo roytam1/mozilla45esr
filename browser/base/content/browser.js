@@ -1222,7 +1222,7 @@ var gBrowserInit = {
     PanelUI.init();
     LightweightThemeListener.init();
 
-    Services.telemetry.getHistogramById("E10S_WINDOW").add(gMultiProcessBrowser);
+    //Services.telemetry.getHistogramById("E10S_WINDOW").add(gMultiProcessBrowser);
 
     SidebarUI.startDelayedLoad();
 
@@ -1354,6 +1354,7 @@ var gBrowserInit = {
       Cu.reportError("Could not end startup crash tracking: " + ex);
     }
 
+/*
     // Delay this a minute because there's no rush
     setTimeout(() => {
       this.gmpInstallManager = new GMPInstallManager();
@@ -1375,6 +1376,7 @@ var gBrowserInit = {
       let h264Works = v.canPlayType("video/mp4") != "";
       Services.telemetry.getHistogramById("VIDEO_CAN_CREATE_H264_DECODER").add(h264Works);
     }, 90 * 1000);
+*/
 
     SessionStore.promiseInitialized.then(() => {
       // Bail out if the window has been closed in the meantime.
@@ -1389,6 +1391,7 @@ var gBrowserInit = {
 
       // Telemetry for master-password - we do this after 5 seconds as it
       // can cause IO if NSS/PSM has not already initialized.
+/*
       setTimeout(() => {
         if (window.closed) {
           return;
@@ -1403,13 +1406,14 @@ var gBrowserInit = {
           Services.telemetry.getHistogramById("MASTER_PASSWORD_ENABLED").add(mpEnabled);
         }
       }, 5000);
+*/
 
       PanicButtonNotifier.init();
     });
     this.delayedStartupFinished = true;
 
     Services.obs.notifyObservers(window, "browser-delayed-startup-finished", "");
-    TelemetryTimestamps.add("delayedStartupFinished");
+    //TelemetryTimestamps.add("delayedStartupFinished");
   },
 
   // Returns the URI(s) to load at startup.
@@ -2784,16 +2788,20 @@ var BrowserOnClick = {
       break;
       case "Browser:SetSSLErrorReportAuto":
         Services.prefs.setBoolPref("security.ssl.errorReporting.automatic", msg.json.automatic);
+/*
         let bin = TLS_ERROR_REPORT_TELEMETRY_AUTO_UNCHECKED;
         if (msg.json.automatic) {
           bin = TLS_ERROR_REPORT_TELEMETRY_AUTO_CHECKED;
         }
         Services.telemetry.getHistogramById("TLS_ERROR_REPORT_UI").add(bin);
+*/
       break;
       case "Browser:SSLErrorReportTelemetry":
+/*
         let reportStatus = msg.data.reportStatus;
         Services.telemetry.getHistogramById("TLS_ERROR_REPORT_UI")
           .add(reportStatus);
+*/
       break;
       case "Browser:OverrideWeakCrypto":
         let weakCryptoOverride = Cc["@mozilla.org/security/weakcryptooverride;1"]
@@ -2825,11 +2833,13 @@ var BrowserOnClick = {
       return;
     }
 
+/*
     let bin = TLS_ERROR_REPORT_TELEMETRY_MANUAL_SEND;
     if (Services.prefs.getBoolPref("security.ssl.errorReporting.automatic")) {
       bin = TLS_ERROR_REPORT_TELEMETRY_AUTO_SEND;
     }
     Services.telemetry.getHistogramById("TLS_ERROR_REPORT_UI").add(bin);
+*/
 
     let serhelper = Cc["@mozilla.org/network/serialization-helper;1"]
                            .getService(Ci.nsISerializationHelper);
@@ -2906,13 +2916,15 @@ var BrowserOnClick = {
   },
 
   onAboutCertError: function (browser, elementId, isTopFrame, location, securityInfoAsString) {
-    let secHistogram = Services.telemetry.getHistogramById("SECURITY_UI");
+    //let secHistogram = Services.telemetry.getHistogramById("SECURITY_UI");
 
     switch (elementId) {
       case "exceptionDialogButton":
+/*
         if (isTopFrame) {
           secHistogram.add(Ci.nsISecurityUITelemetry.WARNING_BAD_CERT_TOP_CLICK_ADD_EXCEPTION);
         }
+*/
 
         let serhelper = Cc["@mozilla.org/network/serialization-helper;1"]
                            .getService(Ci.nsISerializationHelper);
@@ -2943,16 +2955,20 @@ var BrowserOnClick = {
         break;
 
       case "returnButton":
+/*
         if (isTopFrame) {
           secHistogram.add(Ci.nsISecurityUITelemetry.WARNING_BAD_CERT_TOP_GET_ME_OUT_OF_HERE);
         }
+*/
         goBackFromErrorPage();
         break;
 
       case "advancedButton":
+/*
         if (isTopFrame) {
           secHistogram.add(Ci.nsISecurityUITelemetry.WARNING_BAD_CERT_TOP_UNDERSTAND_RISKS);
         }
+*/
 
         let errorInfo = getDetailedCertErrorInfo(location,
                                                  securityInfoAsString);
@@ -2974,6 +2990,7 @@ var BrowserOnClick = {
   onAboutBlocked: function (elementId, reason, isTopFrame, location) {
     // Depending on what page we are displaying here (malware/phishing/unwanted)
     // use the right strings and links for each.
+/*
     let bucketName = "";
     let sendTelemetry = false;
     if (reason === 'malware') {
@@ -2989,11 +3006,14 @@ var BrowserOnClick = {
     let secHistogram = Services.telemetry.getHistogramById("SECURITY_UI");
     let nsISecTel = Ci.nsISecurityUITelemetry;
     bucketName += isTopFrame ? "TOP_" : "FRAME_";
+*/
     switch (elementId) {
       case "getMeOutButton":
+/*
         if (sendTelemetry) {
           secHistogram.add(nsISecTel[bucketName + "GET_ME_OUT_OF_HERE"]);
         }
+*/
         getMeOutOfHere();
         break;
 
@@ -3003,17 +3023,21 @@ var BrowserOnClick = {
 
         // We log even if malware/phishing/unwanted info URL couldn't be found:
         // the measurement is for how many users clicked the WHY BLOCKED button
+/*
         if (sendTelemetry) {
           secHistogram.add(nsISecTel[bucketName + "WHY_BLOCKED"]);
         }
+*/
         openHelpLink("phishing-malware", false, "current");
         break;
 
       case "ignoreWarningButton":
         if (gPrefService.getBoolPref("browser.safebrowsing.allowOverride")) {
+/*
           if (sendTelemetry) {
             secHistogram.add(nsISecTel[bucketName + "IGNORE_WARNING"]);
           }
+*/
           this.ignoreWarningButton(reason);
         }
         break;
@@ -3808,6 +3832,7 @@ const BrowserSearch = {
   },
 
   recordSearchInTelemetry: function (engine, source) {
+/*
     const SOURCES = [
       "abouthome",
       "contextmenu",
@@ -3825,11 +3850,14 @@ const BrowserSearch = {
 
     let count = Services.telemetry.getKeyedHistogramById("SEARCH_COUNTS");
     count.add(countId);
+*/
   },
 
   recordOneoffSearchInTelemetry: function (engine, source, type, where) {
+/*
     let id = this._getSearchEngineId(engine) + "." + source;
     BrowserUITelemetry.countOneoffSearchEvent(id, type, where);
+*/
   }
 };
 
@@ -3992,6 +4020,7 @@ function toOpenWindowByType(inType, uri, features)
 
 function OpenBrowserWindow(options)
 {
+/*
   var telemetryObj = {};
   TelemetryStopwatch.start("FX_NEW_WINDOW_MS", telemetryObj);
 
@@ -4016,6 +4045,7 @@ function OpenBrowserWindow(options)
   // is being closed right after it was opened to avoid leaking.
   Services.obs.addObserver(newDocumentShown, "document-shown", false);
   Services.obs.addObserver(windowClosed, "domwindowclosed", false);
+*/
 
   var charsetArg = new String();
   var handler = Components.classes["@mozilla.org/browser/clh;1"]
@@ -4813,6 +4843,7 @@ var CombinedStopReload = {
 
 var TabsProgressListener = {
   onStateChange: function (aBrowser, aWebProgress, aRequest, aStateFlags, aStatus) {
+/*
     // Collect telemetry data about tab load times.
     if (aWebProgress.isTopLevel) {
       if (aStateFlags & Ci.nsIWebProgressListener.STATE_IS_WINDOW) {
@@ -4827,6 +4858,7 @@ var TabsProgressListener = {
         TelemetryStopwatch.cancel("FX_PAGE_LOAD_MS", aBrowser);
       }
     }
+*/
 
     // Attach a listener to watch for "click" events bubbling up from error
     // pages and other similar pages (like about:newtab). This lets us fix bugs
@@ -5278,11 +5310,13 @@ var gTabletModePageCounter = {
   },
 
   finish() {
+/*
     if (this.enabled) {
       let histogram = Services.telemetry.getKeyedHistogramById("FX_TABLETMODE_PAGE_LOAD");
       histogram.add("tablet", this._tabletCount);
       histogram.add("desktop", this._desktopCount);
     }
+*/
   },
 };
 
@@ -6851,10 +6885,12 @@ var gIdentityHandler = {
   disableMixedContentProtection() {
     // Use telemetry to measure how often unblocking happens
     const kMIXED_CONTENT_UNBLOCK_EVENT = 2;
+/*
     let histogram =
       Services.telemetry.getHistogramById(
         "MIXED_CONTENT_UNBLOCK_COUNTER");
     histogram.add(kMIXED_CONTENT_UNBLOCK_EVENT);
+*/
     // Reload the page with the content unblocked
     BrowserReloadWithFlags(
       Ci.nsIWebNavigation.LOAD_FLAGS_ALLOW_MIXED_CONTENT);

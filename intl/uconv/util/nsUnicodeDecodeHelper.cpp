@@ -31,7 +31,7 @@ nsresult nsUnicodeDecodeHelper::ConvertByTable(
   while ((srcLen > 0) && (dest < destEnd)) {
     bool charFound;
     if (aScanClass == uMultibytesCharset) {
-      NS_ASSERTION(aShiftInTable, "shift table missing");
+      //NS_ASSERTION(aShiftInTable, "shift table missing");
       charFound = uScanShift(aShiftInTable, nullptr, (uint8_t *)src,
                              reinterpret_cast<uint16_t*>(&med), srcLen, 
                              (uint32_t *)&bcr);

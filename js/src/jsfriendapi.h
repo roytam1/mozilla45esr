@@ -219,7 +219,7 @@ extern JS_FRIEND_API(void)
 DumpValue(const JS::Value& val);
 
 extern JS_FRIEND_API(void)
-DumpId(jsid id);
+DumpId(jsid jid);
 
 extern JS_FRIEND_API(void)
 DumpInterpreterFrame(JSContext* cx, InterpreterFrame* start = nullptr);
@@ -715,7 +715,7 @@ NewFunctionWithReserved(JSContext* cx, JSNative call, unsigned nargs, unsigned f
 
 JS_FRIEND_API(JSFunction*)
 NewFunctionByIdWithReserved(JSContext* cx, JSNative native, unsigned nargs, unsigned flags,
-                            jsid id);
+                            jsid jid);
 
 JS_FRIEND_API(const JS::Value&)
 GetFunctionNativeReserved(JSObject* fun, size_t which);
@@ -2495,14 +2495,14 @@ SET_JITINFO(JSFunction * func, const JSJitInfo* info)
 static MOZ_ALWAYS_INLINE jsid
 JSID_FROM_BITS(size_t bits)
 {
-    jsid id;
-    JSID_BITS(id) = bits;
-    return id;
+    jsid jid;
+    JSID_BITS(jid) = bits;
+    return jid;
 }
 
 namespace js {
 namespace detail {
-bool IdMatchesAtom(jsid id, JSAtom* atom);
+bool IdMatchesAtom(jsid jid, JSAtom* atom);
 } // namespace detail
 } // namespace js
 
@@ -2531,28 +2531,28 @@ static MOZ_ALWAYS_INLINE jsid
 NON_INTEGER_ATOM_TO_JSID(JSAtom* atom)
 {
     MOZ_ASSERT(((size_t)atom & 0x7) == 0);
-    jsid id = JSID_FROM_BITS((size_t)atom);
-    MOZ_ASSERT(js::detail::IdMatchesAtom(id, atom));
-    return id;
+    jsid jid = JSID_FROM_BITS((size_t)atom);
+    MOZ_ASSERT(js::detail::IdMatchesAtom(jid, atom));
+    return jid;
 }
 
 /* All strings stored in jsids are atomized, but are not necessarily property names. */
 static MOZ_ALWAYS_INLINE bool
-JSID_IS_ATOM(jsid id)
+JSID_IS_ATOM(jsid jid)
 {
-    return JSID_IS_STRING(id);
+    return JSID_IS_STRING(jid);
 }
 
 static MOZ_ALWAYS_INLINE bool
-JSID_IS_ATOM(jsid id, JSAtom* atom)
+JSID_IS_ATOM(jsid jid, JSAtom* atom)
 {
-    return id == JSID_FROM_BITS((size_t)atom);
+    return jid == JSID_FROM_BITS((size_t)atom);
 }
 
 static MOZ_ALWAYS_INLINE JSAtom*
-JSID_TO_ATOM(jsid id)
+JSID_TO_ATOM(jsid jid)
 {
-    return (JSAtom*)JSID_TO_STRING(id);
+    return (JSAtom*)JSID_TO_STRING(jid);
 }
 
 JS_STATIC_ASSERT(sizeof(jsid) == sizeof(void*));
@@ -2560,15 +2560,15 @@ JS_STATIC_ASSERT(sizeof(jsid) == sizeof(void*));
 namespace js {
 
 static MOZ_ALWAYS_INLINE JS::Value
-IdToValue(jsid id)
+IdToValue(jsid jid)
 {
-    if (JSID_IS_STRING(id))
-        return JS::StringValue(JSID_TO_STRING(id));
-    if (JSID_IS_INT(id))
-        return JS::Int32Value(JSID_TO_INT(id));
-    if (JSID_IS_SYMBOL(id))
-        return JS::SymbolValue(JSID_TO_SYMBOL(id));
-    MOZ_ASSERT(JSID_IS_VOID(id));
+    if (JSID_IS_STRING(jid))
+        return JS::StringValue(JSID_TO_STRING(jid));
+    if (JSID_IS_INT(jid))
+        return JS::Int32Value(JSID_TO_INT(jid));
+    if (JSID_IS_SYMBOL(jid))
+        return JS::SymbolValue(JSID_TO_SYMBOL(jid));
+    MOZ_ASSERT(JSID_IS_VOID(jid));
     return JS::UndefinedValue();
 }
 

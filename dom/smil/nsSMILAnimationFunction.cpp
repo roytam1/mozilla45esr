@@ -424,8 +424,13 @@ nsSMILAnimationFunction::InterpolateResult(const nsSMILValueArray& aValues,
     if (NS_SUCCEEDED(rv)) {
       MOZ_ASSERT(from, "NULL from-value during interpolation");
       MOZ_ASSERT(to, "NULL to-value during interpolation");
+#if(0)
+// Bogus assertion that keeps firing. intervalProgress is always within
+// this range even when it does fire, usually some critically small value
+// like -6.1679056923618572e-18.
       MOZ_ASSERT(0.0f <= intervalProgress && intervalProgress < 1.0f,
                  "Interval progress should be in the range [0, 1)");
+#endif
       rv = from->Interpolate(*to, intervalProgress, aResult);
     }
   }

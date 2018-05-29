@@ -86,7 +86,7 @@ static RedirEntry kRedirMap[] = {
     nsIAboutModule::URI_MUST_LOAD_IN_CHILD |
     nsIAboutModule::ALLOW_SCRIPT |
     nsIAboutModule::ENABLE_INDEXED_DB },
-  { "newtab", "chrome://browser/content/newtab/newTab.xhtml",
+  { "newtab", "about:blank",
     nsIAboutModule::ALLOW_SCRIPT },
 #ifndef RELEASE_BUILD
   { "remote-newtab", "chrome://browser/content/remote-newtab/newTab.xhtml",

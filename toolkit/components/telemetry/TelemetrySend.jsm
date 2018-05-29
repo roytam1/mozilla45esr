@@ -1030,7 +1030,7 @@ var TelemetrySendImpl = {
    * @param {Object} [ping=null] A ping to be checked.
    * @return {Boolean} True if pings can be send to the servers, false otherwise.
    */
-  sendingEnabled: function(ping = null) {
+  sendingEnabled: function(ping = null) { return false;
     // We only send pings from official builds, but allow overriding this for tests.
     if (!Telemetry.isOfficialTelemetry && !this._testMode) {
       return false;

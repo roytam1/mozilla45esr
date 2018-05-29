@@ -2542,11 +2542,31 @@ nsIFrame::BuildDisplayListForChild(nsDisplayListBuilder*   aBuilder,
 
     child->MarkAbsoluteFramesForDisplayList(aBuilder, dirty);
 
+    // moved here from below
+    if (aBuilder->IsBuildingLayerEventRegions()) {
+      // If this frame has a different animated geometry root than its parent,
+      // make sure we accumulate event regions for its layer.
+      if (buildingForChild.IsAnimatedGeometryRoot()) {
+        nsDisplayLayerEventRegions* eventRegions =
+          new (aBuilder) nsDisplayLayerEventRegions(aBuilder, child);
+        eventRegions->AddFrame(aBuilder, child);
+        aBuilder->SetLayerEventRegions(eventRegions);
+        aLists.BorderBackground()->AppendNewToTop(eventRegions);
+      }
+    }
+
+    nsDisplayLayerEventRegions* eventRegions = aBuilder->GetLayerEventRegions();
+    if (eventRegions) {
+      eventRegions->AddFrame(aBuilder, child);
+    }
+
     if (!pseudoStackingContext) {
       // THIS IS THE COMMON CASE.
       // Not a pseudo or real stacking context. Do the simple thing and
       // return early.
 
+// bug 1220466 moves this above.
+#if(0)
       if (aBuilder->IsBuildingLayerEventRegions()) {
         // If this frame has a different animated geometry root than its parent,
         // make sure we accumulate event regions for its layer.
@@ -2563,6 +2583,7 @@ nsIFrame::BuildDisplayListForChild(nsDisplayListBuilder*   aBuilder,
       if (eventRegions) {
         eventRegions->AddFrame(aBuilder, child);
       }
+#endif
       aBuilder->AdjustWindowDraggingRegion(child);
       child->BuildDisplayList(aBuilder, dirty, aLists);
       aBuilder->DisplayCaret(child, dirty, aLists.Content());
@@ -2577,6 +2598,8 @@ nsIFrame::BuildDisplayListForChild(nsDisplayListBuilder*   aBuilder,
     // stacking context's positioned descendant list, because they might be
     // z-index:non-auto
     nsDisplayListCollection pseudoStack;
+// bug 1220466
+#if(0)
     if (aBuilder->IsBuildingLayerEventRegions()) {
       nsDisplayLayerEventRegions* eventRegions =
         new (aBuilder) nsDisplayLayerEventRegions(aBuilder, child);
@@ -2584,6 +2607,7 @@ nsIFrame::BuildDisplayListForChild(nsDisplayListBuilder*   aBuilder,
       aBuilder->SetLayerEventRegions(eventRegions);
       pseudoStack.BorderBackground()->AppendNewToTop(eventRegions);
     }
+#endif
     aBuilder->AdjustWindowDraggingRegion(child);
     child->BuildDisplayList(aBuilder, dirty, pseudoStack);
     aBuilder->DisplayCaret(child, dirty, pseudoStack.Content());

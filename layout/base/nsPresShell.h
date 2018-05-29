@@ -55,9 +55,9 @@ class CSSStyleSheet;
 class EventDispatchingCallback;
 } // namespace mozilla
 
-// 250ms.  This is actually pref-controlled, but we use this value if we fail
+// This is actually pref-controlled, but we use this value if we fail
 // to get the pref for any reason.
-#define PAINTLOCK_EVENT_DELAY 250
+#define PAINTLOCK_EVENT_DELAY 100
 
 class PresShell final : public nsIPresShell,
                         public nsStubDocumentObserver,

@@ -911,6 +911,7 @@ Statistics::endGC()
         for (int i = 0; i < PHASE_LIMIT; i++)
             phaseTotals[j][i] += phaseTimes[j][i];
 
+#if DEBUG
     int64_t total, longest;
     gcDuration(&total, &longest);
 
@@ -938,6 +939,7 @@ Statistics::endGC()
 
     if (fp)
         printStats();
+#endif
 
     // Clear the timers at the end of a GC because we accumulate time in
     // between GCs for some (which come before PHASE_GC_BEGIN in the list.)
@@ -968,7 +970,7 @@ Statistics::beginSlice(const ZoneGCStats& zoneStats, JSGCInvocationKind gckind,
         return;
     }
 
-    runtime->addTelemetry(JS_TELEMETRY_GC_REASON, reason);
+    //runtime->addTelemetry(JS_TELEMETRY_GC_REASON, reason);
 
     // Slice callbacks should only fire for the outermost level.
     if (gcDepth == 1) {
@@ -987,6 +989,7 @@ Statistics::endSlice()
         slices.back().endTimestamp = JS_GetCurrentEmbedderTime();
         slices.back().endFaults = GetPageFaultCount();
 
+#if DEBUG
         int64_t sliceTime = slices.back().end - slices.back().start;
         runtime->addTelemetry(JS_TELEMETRY_GC_SLICE_MS, t(sliceTime));
         runtime->addTelemetry(JS_TELEMETRY_GC_RESET, !!slices.back().resetReason);
@@ -1003,6 +1006,7 @@ Statistics::endSlice()
                 runtime->addTelemetry(JS_TELEMETRY_GC_SLOW_PHASE, phases[longest].telemetryBucket);
             }
         }
+#endif
     }
 
     bool last = !runtime->gc.isIncrementalGCInProgress();

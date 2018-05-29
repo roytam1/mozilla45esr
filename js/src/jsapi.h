@@ -4341,10 +4341,10 @@ extern JS_PUBLIC_API(const char16_t*)
 JS_GetTwoByteFlatStringChars(const JS::AutoCheckCannotGC& nogc, JSFlatString* str);
 
 static MOZ_ALWAYS_INLINE JSFlatString*
-JSID_TO_FLAT_STRING(jsid id)
+JSID_TO_FLAT_STRING(jsid jid)
 {
-    MOZ_ASSERT(JSID_IS_STRING(id));
-    return (JSFlatString*)(JSID_BITS(id));
+    MOZ_ASSERT(JSID_IS_STRING(jid));
+    return (JSFlatString*)(JSID_BITS(jid));
 }
 
 static MOZ_ALWAYS_INLINE JSFlatString*

@@ -748,6 +748,27 @@ nsLayoutUtils::FindContentFor(ViewID aId)
   }
 }
 
+nsIFrame*
+GetScrollFrameFromContent(nsIContent* aContent)
+{
+  nsIFrame* frame = aContent->GetPrimaryFrame();
+  if (aContent->OwnerDoc()->GetRootElement() == aContent) {
+    nsIPresShell* presShell = frame ? frame->PresContext()->PresShell() :
+nullptr;
+    if (!presShell) {
+      presShell = aContent->OwnerDoc()->GetShell();
+    }
+    // We want the scroll frame, the root scroll frame differs from all
+    // others in that the primary frame is not the scroll frame.
+    nsIFrame* rootScrollFrame = presShell ? presShell->GetRootScrollFrame() :
+nullptr;
+    if (rootScrollFrame) {
+      frame = rootScrollFrame;
+    }
+  }
+  return frame;
+}
+
 nsIScrollableFrame*
 nsLayoutUtils::FindScrollableFrameFor(ViewID aId)
 {
@@ -756,6 +777,7 @@ nsLayoutUtils::FindScrollableFrameFor(ViewID aId)
     return nullptr;
   }
 
+#if(0) // backbugs from whatever the hell it was
   nsIFrame* scrolledFrame = content->GetPrimaryFrame();
   if (scrolledFrame && content->OwnerDoc()->GetRootElement() == content) {
     // The content is the root element of a subdocument, so return the root scrollable
@@ -763,6 +785,10 @@ nsLayoutUtils::FindScrollableFrameFor(ViewID aId)
     scrolledFrame = scrolledFrame->PresContext()->PresShell()->GetRootScrollFrame();
   }
   return scrolledFrame ? scrolledFrame->GetScrollTargetFrame() : nullptr;
+#else
+  nsIFrame* scrollFrame = GetScrollFrameFromContent(content);
+  return scrollFrame ? scrollFrame->GetScrollTargetFrame() : nullptr;
+#endif
 }
 
 static nsRect
@@ -1140,8 +1166,51 @@ nsLayoutUtils::SetDisplayPortMargins(nsIContent* aContent,
   }
 
   // Display port margins changing means that the set of visible images may
-  // have drastically changed. Schedule an update.
-  aPresShell->ScheduleImageVisibilityUpdate();
+  // have drastically changed. Check if we should schedule an update.
+  nsIFrame* frame = GetScrollFrameFromContent(aContent);
+  nsIScrollableFrame* scrollableFrame = frame ? frame->GetScrollTargetFrame() : nullptr;
+  if (!scrollableFrame) {
+    return true;
+  }
+
+  nsRect oldDisplayPort;
+  bool hadDisplayPort =
+    scrollableFrame->GetDisplayPortAtLastImageVisibilityUpdate(&oldDisplayPort);
+
+  nsRect newDisplayPort;
+  Unused << GetDisplayPort(aContent, &newDisplayPort);
+
+  bool needImageVisibilityUpdate = !hadDisplayPort;
+  // Check if the width or height was or is going to be 0, mostly
+  // just so we don't divide by zero in the next check.
+  if (newDisplayPort.width == 0 || oldDisplayPort.width == 0 ||
+      newDisplayPort.height == 0 || oldDisplayPort.height == 0) {
+    needImageVisibilityUpdate = true;
+  }
+  // Check if the total size has changed by a large factor.
+  if (!needImageVisibilityUpdate) {
+    if ((newDisplayPort.width/((float)oldDisplayPort.width) > 2.f) ||
+        (oldDisplayPort.width/((float)newDisplayPort.width) > 2.f) ||
+        (newDisplayPort.height/((float)oldDisplayPort.height) > 2.f) ||
+        (oldDisplayPort.height/((float)newDisplayPort.height) > 2.f)) {
+      needImageVisibilityUpdate = true;
+    }
+  }
+  // Check if it's moved by a significant amount.
+  if (!needImageVisibilityUpdate) {
+    if (nsRect* baseData = static_cast<nsRect*>(aContent->GetProperty(nsGkAtoms::DisplayPortBase))) {
+      nsRect base = *baseData;
+      if ((std::abs(newDisplayPort.X() - oldDisplayPort.X()) > base.width) ||
+          (std::abs(newDisplayPort.XMost() - oldDisplayPort.XMost()) > base.width) ||
+          (std::abs(newDisplayPort.Y() - oldDisplayPort.Y()) > base.height) ||
+          (std::abs(newDisplayPort.YMost() - oldDisplayPort.YMost()) > base.height)) {
+        needImageVisibilityUpdate = true;
+      }
+    }
+  }
+  if (needImageVisibilityUpdate) {
+    aPresShell->ScheduleImageVisibilityUpdate();
+  }
 
   return true;
 }

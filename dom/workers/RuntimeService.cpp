@@ -94,7 +94,8 @@ using mozilla::dom::indexedDB::IndexedDatabaseManager;
 #define WORKER_DEFAULT_ALLOCATION_THRESHOLD 30
 
 // Half the size of the actual C stack, to be safe.
-#define WORKER_CONTEXT_NATIVE_STACK_LIMIT 128 * sizeof(size_t) * 1024
+// We need a little larger than regular Firefox.
+#define WORKER_CONTEXT_NATIVE_STACK_LIMIT 512 * sizeof(size_t) * 1024
 
 // The maximum number of threads to use for workers, overridable via pref.
 #define MAX_WORKERS_PER_DOMAIN 10

@@ -460,7 +460,8 @@ public:
    * Add the given hit regions to the hit regions to the hit retions for this
    * PaintedLayer.
    */
-  void AccumulateEventRegions(ContainerState* aState, nsDisplayLayerEventRegions* aEventRegions);
+// bug 1247979
+  void AccumulateEventRegions(ContainerState* aState, nsDisplayLayerEventRegions* aEventRegions, nsRegion &tmp);
 
   /**
    * If this represents only a nsDisplayImage, and the image type supports being
@@ -3319,6 +3320,8 @@ void ContainerState::FinishPaintedLayerData(PaintedLayerData& aData, FindOpaqueB
         containingPaintedLayerData->mReferenceFrame);
       containingPaintedLayerData->mMaybeHitRegion.Or(
         containingPaintedLayerData->mMaybeHitRegion, rect);
+      // bug 1256373
+      containingPaintedLayerData->mMaybeHitRegion.SimplifyOutward(8);
     }
     nsLayoutUtils::TransformToAncestorAndCombineRegions(
       data->mHitRegion.GetBounds(),
@@ -3540,16 +3543,28 @@ PaintedLayerData::Accumulate(ContainerState* aState,
 }
 
 void
-PaintedLayerData::AccumulateEventRegions(ContainerState* aState, nsDisplayLayerEventRegions* aEventRegions)
+PaintedLayerData::AccumulateEventRegions(ContainerState* aState, nsDisplayLayerEventRegions* aEventRegions, nsRegion &tmp)
 {
   FLB_LOG_PAINTED_LAYER_DECISION(this, "Accumulating event regions %p against pld=%p\n", aEventRegions, this);
 
+/* tmp from bug 1247979 */
+#if(0)
   mHitRegion.Or(mHitRegion, aEventRegions->HitRegion());
   mMaybeHitRegion.Or(mMaybeHitRegion, aEventRegions->MaybeHitRegion());
   mDispatchToContentHitRegion.Or(mDispatchToContentHitRegion, aEventRegions->DispatchToContentHitRegion());
   mNoActionRegion.Or(mNoActionRegion, aEventRegions->NoActionRegion());
   mHorizontalPanRegion.Or(mHorizontalPanRegion, aEventRegions->HorizontalPanRegion());
   mVerticalPanRegion.Or(mVerticalPanRegion, aEventRegions->VerticalPanRegion());
+#else
+  // we use a tmp region to avoid modifying the regions in place which is gauranteed to do a new allocation.
+  //
+  tmp.Or(mHitRegion, aEventRegions->HitRegion()); mHitRegion = tmp;
+  tmp.Or(mMaybeHitRegion, aEventRegions->MaybeHitRegion()); mMaybeHitRegion = tmp;
+  tmp.Or(mDispatchToContentHitRegion, aEventRegions->DispatchToContentHitRegion()); mDispatchToContentHitRegion = tmp;
+  tmp.Or(mNoActionRegion, aEventRegions->NoActionRegion()); mNoActionRegion = tmp;
+  tmp.Or(mHorizontalPanRegion, aEventRegions->HorizontalPanRegion()); mHorizontalPanRegion = tmp;
+  tmp.Or(mVerticalPanRegion, aEventRegions->VerticalPanRegion()); mVerticalPanRegion = tmp;
+#endif
 
   // Calculate scaled versions of the bounds of mHitRegion and mMaybeHitRegion
   // for quick access in FindPaintedLayerFor().
@@ -3699,8 +3714,12 @@ ContainerState::ComputeOpaqueRect(nsDisplayItem* aItem,
 {
   bool snapOpaque;
   nsRegion opaque = aItem->GetOpaqueRegion(mBuilder, &snapOpaque);
+  if (opaque.IsEmpty()) {
+    return nsIntRegion();
+  } // bug 1220466
+
   nsIntRegion opaquePixels;
-  if (!opaque.IsEmpty()) {
+//  if (!opaque.IsEmpty()) {
     nsRegion opaqueClipped;
     nsRegionRectIterator iter(opaque);
     for (const nsRect* r = iter.Next(); r; r = iter.Next()) {
@@ -3737,7 +3756,7 @@ ContainerState::ComputeOpaqueRect(nsDisplayItem* aItem,
         *aOpaqueForAnimatedGeometryRootParent = true;
       }
     }
-  }
+//  }
   return opaquePixels;
 }
 
@@ -3815,6 +3834,7 @@ ContainerState::ProcessDisplayItems(nsDisplayList* aList)
 
   nsDisplayList savedItems;
   nsDisplayItem* item;
+  nsRegion tmpRegion;
   while ((item = aList->RemoveBottom()) != nullptr) {
     // Peek ahead to the next item and try merging with it or swapping with it
     // if necessary.
@@ -4001,7 +4021,10 @@ ContainerState::ProcessDisplayItems(nsDisplayList* aList)
       // So we'll do a little hand holding and pass the clip instead of the
       // visible rect for the two important cases.
       nscolor uniformColor = NS_RGBA(0,0,0,0);
-      nscolor* uniformColorPtr = !mayDrawOutOfOrder ? &uniformColor : nullptr;
+// bug 1220466 and comments
+      //nscolor* uniformColorPtr = !mayDrawOutOfOrder ? &uniformColor : nullptr;
+      nscolor* uniformColorPtr = (!mayDrawOutOfOrder && !IsInInactiveLayer())
+		? &uniformColor : nullptr;
       nsIntRect clipRectUntyped;
       const DisplayItemClip& layerClip = shouldFixToViewport ? fixedToViewportClip : itemClip;
       ParentLayerIntRect layerClipRect;
@@ -4162,7 +4185,7 @@ ContainerState::ProcessDisplayItems(nsDisplayList* aList)
       if (itemType == nsDisplayItem::TYPE_LAYER_EVENT_REGIONS) {
         nsDisplayLayerEventRegions* eventRegions =
             static_cast<nsDisplayLayerEventRegions*>(item);
-        paintedLayerData->AccumulateEventRegions(this, eventRegions);
+        paintedLayerData->AccumulateEventRegions(this, eventRegions, tmpRegion);
       } else {
         // check to see if the new item has rounded rect clips in common with
         // other items in the layer

@@ -336,7 +336,7 @@ var TelemetryReportingPolicyImpl = {
    *
    * @return {Boolean} True if we are allowed to upload data, false otherwise.
    */
-  canUpload: function() {
+  canUpload: function() { return false;
     // If data submission is disabled, there's no point in showing the infobar. Just
     // forbid to upload.
     if (!this.dataSubmissionEnabled) {

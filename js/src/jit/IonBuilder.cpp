@@ -8703,6 +8703,7 @@ IonBuilder::pushScalarLoadFromTypedObject(MDefinition* obj,
                                                        elemType,
                                                        DoesNotRequireMemoryBarrier,
                                                        adjustment);
+    load->setTarget(MLoadUnboxedScalar::TypedArrayTarget);
     current->add(load);
     current->push(load);
 
@@ -9549,6 +9550,7 @@ IonBuilder::jsop_getelem_typed(MDefinition* obj, MDefinition* index,
 
         // Load the element.
         MLoadUnboxedScalar* load = MLoadUnboxedScalar::New(alloc(), elements, index, arrayType);
+        load->setTarget(MLoadUnboxedScalar::TypedArrayTarget);
         current->add(load);
         current->push(load);
 
@@ -10094,6 +10096,7 @@ IonBuilder::jsop_setelem_typed(Scalar::Type arrayType,
         MStoreUnboxedScalar* store =
             MStoreUnboxedScalar::New(alloc(), elements, id, toWrite, arrayType,
                                      MStoreUnboxedScalar::TruncateInput);
+        store->setTarget(MStoreUnboxedScalar::TypedArrayTarget);
         ins = store;
     }
 

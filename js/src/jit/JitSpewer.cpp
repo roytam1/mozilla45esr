@@ -490,6 +490,8 @@ jit::CheckLogging()
         EnableIonDebugSyncLogging();
     if (ContainsFlag(env, "profiling"))
         EnableChannel(JitSpew_Profiling);
+    if (ContainsFlag(env, "irregexp"))
+        EnableChannel(JitSpew_Irregexp);
     if (ContainsFlag(env, "trackopts"))
         EnableChannel(JitSpew_OptimizationTracking);
     if (ContainsFlag(env, "all"))

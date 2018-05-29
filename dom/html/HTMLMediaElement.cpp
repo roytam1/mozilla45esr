@@ -3893,8 +3893,24 @@ void HTMLMediaElement::ChangeReadyState(nsMediaReadyState aState)
   UpdateAudioChannelPlayingState();
 
   // Handle raising of "waiting" event during seek (see 4.8.10.9)
+  // or
+  // 4.8.12.7 Ready states:
+  // "If the previous ready state was HAVE_FUTURE_DATA or more, and the new
+  // ready state is HAVE_CURRENT_DATA or less
+  // If the media element was potentially playing before its readyState
+  // attribute changed to a value lower than HAVE_FUTURE_DATA, and the element
+  // has not ended playback, and playback has not stopped due to errors,
+  // paused for user interaction, or paused for in-band content, the user agent
+  // must queue a task to fire a simple event named timeupdate at the element,
+  // and queue a task to fire a simple event named waiting at the element."
+  // (bug 1298594)
   if (mPlayingBeforeSeek &&
       mReadyState < nsIDOMHTMLMediaElement::HAVE_FUTURE_DATA) {
+    DispatchAsyncEvent(NS_LITERAL_STRING("waiting"));
+  } else if (oldState >= nsIDOMHTMLMediaElement::HAVE_FUTURE_DATA &&
+             mReadyState < nsIDOMHTMLMediaElement::HAVE_FUTURE_DATA &&
+             !Paused() && !Ended() && !mError) {
+    FireTimeUpdate(false);
     DispatchAsyncEvent(NS_LITERAL_STRING("waiting"));
   }
 
@@ -3905,9 +3921,12 @@ void HTMLMediaElement::ChangeReadyState(nsMediaReadyState aState)
     mLoadedDataFired = true;
   }
 
+// bug 1298594
+#if(0)
   if (mReadyState == nsIDOMHTMLMediaElement::HAVE_CURRENT_DATA) {
     mWaitingFired = false;
   }
+#endif
 
   if (oldState < nsIDOMHTMLMediaElement::HAVE_FUTURE_DATA &&
       mReadyState >= nsIDOMHTMLMediaElement::HAVE_FUTURE_DATA) {
