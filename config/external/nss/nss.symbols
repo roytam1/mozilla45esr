@@ -277,6 +277,7 @@ NSSSMIME_GetVersion
 NSS_SMIMESignerInfo_SaveSMIMEProfile
 NSS_SMIMEUtil_FindBulkAlgForRecipients
 NSSSSL_GetVersion
+_NSSUTIL_Access
 NSSUTIL_ArgDecodeNumber
 NSSUTIL_ArgFetchValue
 NSSUTIL_ArgGetLabel
@@ -298,6 +299,7 @@ NSSUTIL_MkModuleSpec
 NSSUTIL_MkNSSString
 NSSUTIL_MkSlotString
 NSSUTIL_Quote
+_NSSUTIL_UTF8ToWide
 PK11_AlgtagToMechanism
 PK11_Authenticate
 PK11_ChangePW
@@ -448,12 +450,14 @@ PORT_ArenaStrdup_Util
 PORT_ArenaUnmark_Util
 PORT_ArenaZAlloc
 PORT_ArenaZAlloc_Util
+PORT_DestroyCheapArena
 PORT_Free
 PORT_FreeArena
 PORT_FreeArena_Util
 PORT_Free_Util
 PORT_GetError
 PORT_GetError_Util
+PORT_InitCheapArena
 PORT_NewArena
 PORT_NewArena_Util
 PORT_Realloc_Util
@@ -660,6 +664,7 @@ SSL_HandshakeCallback
 SSL_HandshakeNegotiatedExtension
 SSL_ImplementedCiphers @DATA@
 SSL_ImportFD
+SSL_NamedGroupConfig
 SSL_NumImplementedCiphers @DATA@
 SSL_OptionSet
 SSL_OptionSetDefault
@@ -692,6 +697,13 @@ VFY_VerifyDataWithAlgorithmID
 VFY_VerifyDigestDirect
 _SGN_VerifyPKCS1DigestInfo
 __PK11_SetCertificateNickname
+# These symbols are not used by Firefox but are used across NSS library boundaries.
+NSS_SecureMemcmpZero
+PORT_ZAllocAlignedOffset_Util
+CERT_FindCertByNicknameOrEmailAddrCX
+SECKEY_GetPrivateKeyType
+SEC_DerSignDataWithAlgorithmID
+SEC_CreateSignatureAlgorithmParameters
 # These symbols are not used by Firefox itself, but are used by Java's security
 # libraries, which in turn are used by Java applets/plugins/etc.  Provide them
 # to make Java code happy.
