@@ -3849,7 +3849,6 @@ CanvasRenderingContext2D::DrawOrMeasureText(const nsAString& aRawText,
 
   // calls bidi algo twice since it needs the full text width and the
   // bounding boxes before rendering anything
-  nsBidi bidiEngine;
   rv = nsBidiPresUtils::ProcessText(textToDraw.get(),
                                     textToDraw.Length(),
                                     isRTL ? NSBIDI_RTL : NSBIDI_LTR,
@@ -3859,7 +3858,7 @@ CanvasRenderingContext2D::DrawOrMeasureText(const nsAString& aRawText,
                                     nullptr,
                                     0,
                                     &totalWidthCoord,
-                                    &bidiEngine);
+                                    &mBidiEngine);
   if (NS_FAILED(rv)) {
     return rv;
   }
@@ -3974,7 +3973,7 @@ CanvasRenderingContext2D::DrawOrMeasureText(const nsAString& aRawText,
                                     nullptr,
                                     0,
                                     nullptr,
-                                    &bidiEngine);
+                                    &mBidiEngine);
 
 
   mTarget->SetTransform(oldTransform);
