@@ -36,12 +36,12 @@ def get_official_milestone(path):
     raise Exception("Didn't find a line that starts with a digit.")
 
 
-def get_milestone_major(milestone):
+def get_milestone(milestone):
     """
-    Returns the major (first) part of the milestone.
+    Returns the major and minor part of the milestone.
     """
 
-    return milestone.split('.')[0]
+    return "%s.%s" % (milestone.split('.')[0],milestone.split('.')[1])
 
 
 def main(args):
@@ -56,15 +56,15 @@ def main(args):
     milestone = get_official_milestone(milestone_file)
 
     if options.uaversion:
-        # Only expose the major milestone in the UA string, hide the patch
+        # Only expose the major/minor milestone in the UA string, hide the patch
         # level (bugs 572659 and 870868).
-        uaversion = "%s.0" % (get_milestone_major(milestone),)
+        uaversion = "%s" % (get_milestone(milestone),)
         print(uaversion)
 
     elif options.symbolversion:
-        # Only expose major milestone and alpha version. Used for symbol
+        # Only expose major/minor milestone and alpha version. Used for symbol
         # versioning on Linux.
-        symbolversion = "%s%s" % (get_milestone_major(milestone),
+        symbolversion = "%s%s" % (get_milestone(milestone),
                                   get_milestone_ab_with_num(milestone))
         print(symbolversion)
     else:
