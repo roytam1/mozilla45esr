@@ -164,6 +164,8 @@ public:
 
     int64_t GetTransferSize() { return mTransferSize; }
 
+    bool Do0RTT() override;
+    nsresult Finish0RTT(bool aRestart) override;
 private:
     friend class DeleteHttpTransaction;
     virtual ~nsHttpTransaction();
@@ -450,6 +452,10 @@ public:
 
 private:
     RefPtr<ASpdySession> mTunnelProvider;
+
+    bool                            m0RTTInProgress;
+
+    nsresult                        mTransportStatus;
 
 public:
     void GetNetworkAddresses(NetAddr &self, NetAddr &peer);
