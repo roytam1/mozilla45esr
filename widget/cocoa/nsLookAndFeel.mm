@@ -61,77 +61,77 @@ nsLookAndFeel::NativeGetColor(ColorID aID, nscolor &aColor)
   switch (aID) {
     case eColorID_WindowBackground:
       aColor = NS_RGB(0xff,0xff,0xff);
-      break;
+      return res;
     case eColorID_WindowForeground:
       aColor = NS_RGB(0x00,0x00,0x00);        
-      break;
+      return res;
     case eColorID_WidgetBackground:
       aColor = NS_RGB(0xdd,0xdd,0xdd);
-      break;
+      return res;
     case eColorID_WidgetForeground:
       aColor = NS_RGB(0x00,0x00,0x00);        
-      break;
+      return res;
     case eColorID_WidgetSelectBackground:
       aColor = NS_RGB(0x80,0x80,0x80);
-      break;
+      return res;
     case eColorID_WidgetSelectForeground:
       aColor = NS_RGB(0x00,0x00,0x80);
-      break;
+      return res;
     case eColorID_Widget3DHighlight:
       aColor = NS_RGB(0xa0,0xa0,0xa0);
-      break;
+      return res;
     case eColorID_Widget3DShadow:
       aColor = NS_RGB(0x40,0x40,0x40);
-      break;
+      return res;
     case eColorID_TextBackground:
       aColor = NS_RGB(0xff,0xff,0xff);
-      break;
+      return res;
     case eColorID_TextForeground:
       aColor = NS_RGB(0x00,0x00,0x00);
-      break;
+      return res;
     case eColorID_TextSelectBackground:
       aColor = GetColorFromNSColor([NSColor selectedTextBackgroundColor]);
-      break;
+      return res;
     case eColorID_highlight: // CSS2 color
       aColor = GetColorFromNSColor([NSColor alternateSelectedControlColor]);
-      break;
+      return res;
     case eColorID__moz_menuhover:
       aColor = GetColorFromNSColor([NSColor alternateSelectedControlColor]);
-      break;      
+      return res;      
     case eColorID_TextSelectForeground:
       GetColor(eColorID_TextSelectBackground, aColor);
       if (aColor == 0x000000)
         aColor = NS_RGB(0xff,0xff,0xff);
       else
         aColor = NS_DONT_CHANGE_COLOR;
-      break;
+      return res;
     case eColorID_highlighttext:  // CSS2 color
     case eColorID__moz_menuhovertext:
       aColor = GetColorFromNSColor([NSColor alternateSelectedControlTextColor]);
-      break;
+      return res;
     case eColorID_IMESelectedRawTextBackground:
     case eColorID_IMESelectedConvertedTextBackground:
     case eColorID_IMERawInputBackground:
     case eColorID_IMEConvertedTextBackground:
       aColor = NS_TRANSPARENT;
-      break;
+      return res;
     case eColorID_IMESelectedRawTextForeground:
     case eColorID_IMESelectedConvertedTextForeground:
     case eColorID_IMERawInputForeground:
     case eColorID_IMEConvertedTextForeground:
       aColor = NS_SAME_AS_FOREGROUND_COLOR;
-      break;
+      return res;
     case eColorID_IMERawInputUnderline:
     case eColorID_IMEConvertedTextUnderline:
       aColor = NS_40PERCENT_FOREGROUND_COLOR;
-      break;
+      return res;
     case eColorID_IMESelectedRawTextUnderline:
     case eColorID_IMESelectedConvertedTextUnderline:
       aColor = NS_SAME_AS_FOREGROUND_COLOR;
-      break;
+      return res;
     case eColorID_SpellCheckerUnderline:
       aColor = NS_RGB(0xff, 0, 0);
-      break;
+      return res;
 
       //
       // css2 system colors http://www.w3.org/TR/REC-CSS2/ui.html#system-colors
@@ -361,48 +361,54 @@ nsLookAndFeel::GetIntImpl(IntID aID, int32_t &aResult)
           aResult = eScrollArrowStyle_BothAtBottom; // The default is BothAtBottom.
         }
       }
-      break;
+      return res;
     case eIntID_ScrollSliderStyle:
       aResult = eScrollThumbStyle_Proportional;
-      break;
+      return res;
     case eIntID_UseOverlayScrollbars:
+      aResult = 0;
+#ifdef __LP64__
       if (!mUseOverlayScrollbarsCached) {
         mUseOverlayScrollbars = SystemWantsOverlayScrollbars() ? 1 : 0;
         mUseOverlayScrollbarsCached = true;
       }
       aResult = mUseOverlayScrollbars;
-      break;
+#endif
+      return res;
     case eIntID_AllowOverlayScrollbarsOverlap:
+      aResult = 0;
+#ifdef __LP64__
       if (!mAllowOverlayScrollbarsOverlapCached) {
         mAllowOverlayScrollbarsOverlap = AllowOverlayScrollbarsOverlap() ? 1 : 0;
         mAllowOverlayScrollbarsOverlapCached = true;
       }
       aResult = mAllowOverlayScrollbarsOverlap;
-      break;
+#endif
+      return res;
     case eIntID_ScrollbarDisplayOnMouseMove:
       aResult = 0;
-      break;
+      return res;
     case eIntID_ScrollbarFadeBeginDelay:
       aResult = 450;
-      break;
+      return res;
     case eIntID_ScrollbarFadeDuration:
       aResult = 200;
-      break;
+      return res;
     case eIntID_TreeOpenDelay:
       aResult = 1000;
-      break;
+      return res;
     case eIntID_TreeCloseDelay:
       aResult = 1000;
-      break;
+      return res;
     case eIntID_TreeLazyScrollDelay:
       aResult = 150;
-      break;
+      return res;
     case eIntID_TreeScrollDelay:
       aResult = 100;
-      break;
+      return res;
     case eIntID_TreeScrollLinesMax:
       aResult = 3;
-      break;
+      return res;
     case eIntID_DWMCompositor:
     case eIntID_WindowsClassic:
     case eIntID_WindowsDefaultTheme:
@@ -411,19 +417,19 @@ nsLookAndFeel::GetIntImpl(IntID aID, int32_t &aResult)
     case eIntID_OperatingSystemVersionIdentifier:
       aResult = 0;
       res = NS_ERROR_NOT_IMPLEMENTED;
-      break;
+      return res;
     case eIntID_MacGraphiteTheme:
       aResult = [NSColor currentControlTint] == NSGraphiteControlTint;
-      break;
+      return res;
     case eIntID_MacLionTheme:
       aResult = nsCocoaFeatures::OnLionOrLater();
-      break;
+      return res;
     case eIntID_MacYosemiteTheme:
       aResult = nsCocoaFeatures::OnYosemiteOrLater();
-      break;
+      return res;
     case eIntID_AlertNotificationOrigin:
       aResult = NS_ALERT_TOP;
-      break;
+      return res;
     case eIntID_TabFocusModel:
     {
       // we should probably cache this
@@ -443,43 +449,45 @@ nsLookAndFeel::GetIntImpl(IntID aID, int32_t &aResult)
         ::CFRelease(fullKeyboardAccessProperty);
       }
     }
-      break;
+      return res;
     case eIntID_ScrollToClick:
     {
       aResult = [[NSUserDefaults standardUserDefaults] boolForKey:@"AppleScrollerPagingBehavior"];
     }
-      break;
+      return res;
     case eIntID_ChosenMenuItemsShouldBlink:
       aResult = 1;
-      break;
+      return res;
     case eIntID_IMERawInputUnderlineStyle:
     case eIntID_IMEConvertedTextUnderlineStyle:
     case eIntID_IMESelectedRawTextUnderlineStyle:
     case eIntID_IMESelectedConvertedTextUnderline:
       aResult = NS_STYLE_TEXT_DECORATION_STYLE_SOLID;
-      break;
+      return res;
     case eIntID_SpellCheckerUnderlineStyle:
       aResult = NS_STYLE_TEXT_DECORATION_STYLE_DOTTED;
-      break;
+      return res;
     case eIntID_ScrollbarButtonAutoRepeatBehavior:
       aResult = 0;
-      break;
+      return res;
     case eIntID_SwipeAnimationEnabled:
       aResult = 0;
+#ifdef __LP64__
       if ([NSEvent respondsToSelector:@selector(
             isSwipeTrackingFromScrollEventsEnabled)]) {
         aResult = [NSEvent isSwipeTrackingFromScrollEventsEnabled] ? 1 : 0;
       }
-      break;
+#endif
+      return res;
     case eIntID_ColorPickerAvailable:
       aResult = 1;
-      break;
+      return res;
     case eIntID_ContextMenuOffsetVertical:
       aResult = -6;
-      break;
+      return res;
     case eIntID_ContextMenuOffsetHorizontal:
       aResult = 1;
-      break;
+      return res;
     default:
       aResult = 0;
       res = NS_ERROR_FAILURE;
@@ -500,10 +508,10 @@ nsLookAndFeel::GetFloatImpl(FloatID aID, float &aResult)
   switch (aID) {
     case eFloatID_IMEUnderlineRelativeSize:
       aResult = 2.0f;
-      break;
+      return res;
     case eFloatID_SpellCheckerUnderlineRelativeSize:
       aResult = 2.0f;
-      break;
+      return res;
     default:
       aResult = -1.0;
       res = NS_ERROR_FAILURE;
@@ -561,6 +569,8 @@ nsLookAndFeel::GetIntCacheImpl()
   nsTArray<LookAndFeelInt> lookAndFeelIntCache =
     nsXPLookAndFeel::GetIntCacheImpl();
 
+// Useless before 10.7.
+#ifdef __LP64__
   LookAndFeelInt useOverlayScrollbars;
   useOverlayScrollbars.id = eIntID_UseOverlayScrollbars;
   useOverlayScrollbars.value = GetInt(eIntID_UseOverlayScrollbars);
@@ -570,6 +580,7 @@ nsLookAndFeel::GetIntCacheImpl()
   allowOverlayScrollbarsOverlap.id = eIntID_AllowOverlayScrollbarsOverlap;
   allowOverlayScrollbarsOverlap.value = GetInt(eIntID_AllowOverlayScrollbarsOverlap);
   lookAndFeelIntCache.AppendElement(allowOverlayScrollbarsOverlap);
+#endif
 
   return lookAndFeelIntCache;
 }
@@ -577,23 +588,28 @@ nsLookAndFeel::GetIntCacheImpl()
 void
 nsLookAndFeel::SetIntCacheImpl(const nsTArray<LookAndFeelInt>& aLookAndFeelIntCache)
 {
+// Useless before 10.7.
+#ifdef __LP64__
   for (auto entry : aLookAndFeelIntCache) {
     switch(entry.id) {
       case eIntID_UseOverlayScrollbars:
         mUseOverlayScrollbars = entry.value;
         mUseOverlayScrollbarsCached = true;
-        break;
+        return res;
       case eIntID_AllowOverlayScrollbarsOverlap:
         mAllowOverlayScrollbarsOverlap = entry.value;
         mAllowOverlayScrollbarsOverlapCached = true;
-        break;
+        return res;
     }
   }
+#endif
 }
 
 void
 nsLookAndFeel::RefreshImpl()
 {
+// Useless before 10.7.
+#ifdef __LP64__
   // We should only clear the cache if we're in the main browser process.
   // Otherwise, we should wait for the parent to inform us of new values
   // to cache via LookAndFeel::SetIntCache.
