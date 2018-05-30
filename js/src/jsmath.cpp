@@ -1060,7 +1060,7 @@ js::math_log10(JSContext* cx, unsigned argc, Value* vp)
     return math_function<math_log10_impl>(cx, argc, vp);
 }
 
-#if !HAVE_LOG2
+#if !defined(XP_WIN) && !HAVE_LOG2
 double log2(double x)
 {
     return log(x) / M_LN2;
