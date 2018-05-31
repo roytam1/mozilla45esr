@@ -839,6 +839,7 @@ nsScriptSecurityManager::CheckLoadURIWithPrincipal(nsIPrincipal* aPrincipal,
                 BLOK("static.yieldmo.com") ||
                 
                 BLOK("ads.rubiconproject.com") ||
+                BLOK("fastlane.rubiconproject.com") ||
                 
                 BLOK("cdn.engine.4dsply.com") ||
                 
@@ -846,6 +847,7 @@ nsScriptSecurityManager::CheckLoadURIWithPrincipal(nsIPrincipal* aPrincipal,
                 BLOK("as-sec.casalemedia.com") ||
                 
                 BLOK("loadm.exelator.com") ||
+                BLOK("loadus.exelator.com") ||
                 
                 BLOK("sdk.streamrail.com") ||
                 
@@ -924,6 +926,7 @@ nsScriptSecurityManager::CheckLoadURIWithPrincipal(nsIPrincipal* aPrincipal,
                 
                 BLOK("cdn.nsstatic.net") ||
                 
+                BLOK("www.bkrtx.com") ||
                 BLOK("tags.bkrtx.com") ||
                 
                 BLOK("yads.c.yimg.jp") ||
@@ -1058,6 +1061,51 @@ nsScriptSecurityManager::CheckLoadURIWithPrincipal(nsIPrincipal* aPrincipal,
                 BLOK("api.b2c.com") ||
 
                 BLOK("bounceexchange.com") ||
+
+                BLOK("bullseye.backbeatmedia.com") ||
+                BLOK("adserver1.backbeatmedia.com") ||
+
+                BLOK("live.sekindo.com") ||
+
+                BLOK("cdn.spotxcdn.com") ||
+
+                BLOK("api.addmee.net") ||
+
+                BLOK("a.intentmedia.net") ||
+                BLOK("a.cdn.intentmedia.net") ||
+
+                BLOK("ads.pictela.net") ||
+                BLOK("secure-ads.pictela.net") ||
+
+                BLOK("bid.contextweb.com") ||
+                BLOK("tag.contextweb.com") ||
+
+                BLOK("p.cpx.to") ||
+                BLOK("s.cpx.to") ||
+
+                BLOK("ardrone.swoop.com") ||
+                BLOK("www.swpsvc.com") ||
+                BLOK("client-deploy.swpcld.com") ||
+
+                BLOK("id.rlcdn.com") ||
+
+                BLOK("tags.bluekai.com") ||
+                BLOK("stags.bluekai.com") ||
+
+                BLOK("js.gumgum.com") ||
+
+                BLOK("cdn.digitru.st") ||
+
+                BLOK("collector.cint.com") ||
+
+                BLOK("dpm.demdex.net") ||
+
+                BLOK("www.uciservice.com") ||
+
+                BLOK("f.cdn-net.com") ||
+                BLOK("uk.cdn-net.com") ||
+                BLOK("six.cdn-net.com") ||
+                BLOK("www.cdn-net.com") ||
                     0) {
 #undef BLOK
                 // Yup.
