@@ -209,6 +209,12 @@ struct writeBuf
     int offset;
 };
 
+#ifdef __ppc__
+#define TAG_CFF 0x43464620
+#else
+#define TAG_CFF 0x20464643
+#endif
+
 bool
 ScaledFontMac::GetFontFileData(FontFileDataOutput aDataCallback, void *aBaton)
 {
@@ -223,7 +229,7 @@ ScaledFontMac::GetFontFileData(FontFileDataOutput aDataCallback, void *aBaton)
     bool CFF = false;
     for (CFIndex i = 0; i<count; i++) {
         uint32_t tag = (uint32_t)(uintptr_t)CFArrayGetValueAtIndex(tags, i);
-        if (tag == 0x43464620) // 'CFF '
+        if (tag == TAG_CFF) // 'CFF '
             CFF = true;
         CFDataRef data = CGFontCopyTableForTag(mFont, tag);
         records[i].tag = tag;
