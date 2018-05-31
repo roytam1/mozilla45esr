@@ -185,18 +185,30 @@ gfxPlatformMac::MakePlatformFont(const nsAString& aFontName,
 // Since HTTPS is becoming more common, check that first.
 #define HTTP_OR_HTTPS_SUBDIR(x) \
     { \
-       if (!failed) { \
            NS_NAMED_LITERAL_CSTRING(https_, "https://" x); \
            spec.Left(loc, https_.Length()); \
            if (loc.Equals(https_)) { \
                failed = true; \
+               goto halt_font; \
            } else { \
                NS_NAMED_LITERAL_CSTRING(http_, "http://" x); \
                spec.Left(loc, http_.Length()); \
-               if (loc.Equals(http_)) \
+               if (loc.Equals(http_)) { \
                    failed = true; \
+                   goto halt_font; \
+               } \
            } \
-       } \
+    }
+
+// TenFourFox issue 477: deal with changing infix version URLs, such as latimes.com
+#define HOST_AND_KEY(x, y) \
+    { \
+            if (hostname.Equals(x)) { \
+                 if (spec.Find(y) != kNotFound) { \
+                    failed = true; \
+                    goto halt_font; \
+                } \
+            } \
     }
 
 bool

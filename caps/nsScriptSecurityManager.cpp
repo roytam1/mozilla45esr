@@ -693,7 +693,7 @@ nsScriptSecurityManager::CheckLoadURIWithPrincipal(nsIPrincipal* aPrincipal,
     if (mIsTenFourFoxAdBlockEnabled &&
             (targetScheme.EqualsLiteral("http") || targetScheme.EqualsLiteral("https"))) {
         nsAutoCString hostname;
-        if (NS_SUCCEEDED(targetBaseURI->GetHost(hostname))) {
+        if (MOZ_LIKELY(NS_SUCCEEDED(targetBaseURI->GetHost(hostname)))) {
             ToLowerCase(hostname);
 #define BLOK(q) hostname.EqualsLiteral(q)
             if (0 ||
@@ -705,6 +705,7 @@ nsScriptSecurityManager::CheckLoadURIWithPrincipal(nsIPrincipal* aPrincipal,
                 
                 // blocking zdbb.net seems to be problematic
                 // https://github.com/AdguardTeam/AdguardFilters/issues/1278
+                // this may also be true for adziff.com
 
                 BLOK("c.amazon-adsystem.com") ||
 
@@ -786,12 +787,14 @@ nsScriptSecurityManager::CheckLoadURIWithPrincipal(nsIPrincipal* aPrincipal,
                 BLOK("cdn.viglink.com") ||
                 
                 BLOK("xcp.go.sonobi.com") ||
+                BLOK("apex.go.sonobi.com") ||
                 
                 BLOK("s.ntv.io") ||
                 
                 BLOK("cdn.segment.com") ||
                 
                 BLOK("cdn-gl.imrworldwide.com") ||
+                BLOK("secure-us.imrworldwide.com") ||
                 BLOK("secure-dcr.imrworldwide.com") ||
                 
                 BLOK("labs-cdn.revcontent.com") ||
@@ -826,6 +829,7 @@ nsScriptSecurityManager::CheckLoadURIWithPrincipal(nsIPrincipal* aPrincipal,
                 
                 BLOK("cdn.engine.4dsply.com") ||
                 
+                BLOK("as.casalemedia.com") ||
                 BLOK("as-sec.casalemedia.com") ||
                 
                 BLOK("loadm.exelator.com") ||
@@ -899,6 +903,7 @@ nsScriptSecurityManager::CheckLoadURIWithPrincipal(nsIPrincipal* aPrincipal,
                 BLOK("sb.monetate.net") ||
                 BLOK("se.monetate.net") ||
                 
+                BLOK("ad.crwdcntrl.net") ||
                 BLOK("tags.crwdcntrl.net") ||
                 
                 BLOK("cdn.nsstatic.net") ||
@@ -972,6 +977,36 @@ nsScriptSecurityManager::CheckLoadURIWithPrincipal(nsIPrincipal* aPrincipal,
 
                 BLOK("tags.mathtag.com") ||
                 BLOK("pixel.mathtag.com") ||
+
+                BLOK("a.teads.tv") ||
+                BLOK("cdn.teads.tv") ||
+
+                BLOK("cdata.carambo.la") ||
+                BLOK("route.carambo.la") ||
+
+                BLOK("us-ads.openx.net") ||
+
+                BLOK("s-static.innovid.com") ||
+
+                // This is controversial, but I'm pretty sure we
+                // don't want this.
+                BLOK("coinhive.com") ||
+
+                BLOK("ustatik.com") ||
+                BLOK("cdn.ustatik.com") ||
+
+                BLOK("adx.adform.net") ||
+
+                BLOK("s.spoutable.com") ||
+                BLOK("cdn.spoutable.com") ||
+
+                BLOK("ads.pubmatic.com") ||
+
+                BLOK("track.netshelter.net") ||
+
+                BLOK("t.neodatagroup.com") ||
+
+                BLOK("ads.servebom.com") ||
                     0) {
 #undef BLOK
                 // Yup.
