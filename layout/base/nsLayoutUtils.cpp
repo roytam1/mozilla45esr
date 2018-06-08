@@ -5184,10 +5184,10 @@ nsLayoutUtils::ComputeSizeWithIntrinsicDimensions(WritingMode aWM,
     // as its size in the container's main axis.
     FrameProperties props = aFrame->Properties();
     bool didImposeMainSize;
-    nscoord imposedMainSize =
-      *static_cast<nscoord*>(props.Get(nsIFrame::FlexItemMainSizeOverride(), &didImposeMainSize));
-    if (didImposeMainSize) {
-      imposedMainSizeStyleCoord.emplace(imposedMainSize,
+    nscoord *imposedMainSize =
+      static_cast<nscoord*>(props.Get(nsIFrame::FlexItemMainSizeOverride(), &didImposeMainSize));
+    if (imposedMainSize && didImposeMainSize) {
+      imposedMainSizeStyleCoord.emplace(*imposedMainSize,
                                         nsStyleCoord::CoordConstructor);
       if (isInlineFlexItem) {
         inlineStyleCoord = imposedMainSizeStyleCoord.ptr();
