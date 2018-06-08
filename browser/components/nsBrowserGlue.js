@@ -52,6 +52,9 @@ XPCOMUtils.defineLazyModuleGetter(this, "ContentClick",
 XPCOMUtils.defineLazyModuleGetter(this, "NetUtil",
                                   "resource://gre/modules/NetUtil.jsm");
 
+XPCOMUtils.defineLazyModuleGetter(this, "UserAgentOverrides",
+                                  "resource://gre/modules/UserAgentOverrides.jsm");
+
 XPCOMUtils.defineLazyModuleGetter(this, "FileUtils",
                                   "resource://gre/modules/FileUtils.jsm");
 
@@ -819,6 +822,7 @@ BrowserGlue.prototype = {
 
     this._syncSearchEngines();
 
+    UserAgentOverrides.init();
     WebappManager.init();
     PageThumbs.init();
 #ifdef NIGHTLY_BUILD
@@ -1167,6 +1171,7 @@ BrowserGlue.prototype = {
       NewTabPrefsProvider.prefs.uninit();
     }
     AboutNewTab.uninit();
+    UserAgentOverrides.uninit();
 #ifdef NIGHTLY_BUILD
     if (Services.prefs.getBoolPref("dom.identity.enabled")) {
       SignInToWebsiteUX.uninit();
