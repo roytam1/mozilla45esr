@@ -29,6 +29,9 @@
   <preference id="general.smoothScroll"
               name="general.smoothScroll"
               type="bool"/>
+  <preference id="tenfourfox.adblock.enabled"
+              name="tenfourfox.adblock.enabled"
+              type="bool"/>
   <preference id="layers.acceleration.disabled"
               name="layers.acceleration.disabled"
               type="bool"
@@ -182,6 +185,10 @@
                   onsyncfrompreference="return gAdvancedPane.readCheckSpelling();"
                   onsynctopreference="return gAdvancedPane.writeCheckSpelling();"
                   preference="layout.spellcheckDefault"/>
+        <checkbox id="useTenFourFoxAdBlock"
+                  label="Use TenFourFox AdBlock"
+                  accesskey="D"
+                  preference="tenfourfox.adblock.enabled"/>
       </groupbox>
     </tabpanel>
 #ifdef MOZ_DATA_REPORTING
