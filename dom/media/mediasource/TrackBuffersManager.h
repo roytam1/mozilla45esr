@@ -348,7 +348,13 @@ private:
   // Global size of this source buffer content.
   Atomic<int64_t> mSizeSourceBuffer;
   uint32_t mEvictionThreshold;
-  Atomic<bool> mEvictionOccurred;
+  enum class EvictionState
+  {
+    NO_EVICTION_NEEDED,
+    EVICTION_NEEDED,
+    EVICTION_COMPLETED,
+  };
+  Atomic<EvictionState> mEvictionState;
 
   // Monitor to protect following objects accessed across multipple threads.
   // mMonitor is also notified if the value of mAppendRunning becomes false.

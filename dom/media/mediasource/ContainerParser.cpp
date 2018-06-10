@@ -19,6 +19,7 @@
 #include "mp4_demuxer/ByteReader.h"
 #endif
 #include "SourceBufferResource.h"
+#include <algorithm>
 
 extern mozilla::LogModule* GetMediaSourceSamplesLog();
 
@@ -342,13 +343,25 @@ public:
     // Each MP4 atom has a chunk size and chunk type. The root chunk in an MP4
     // file is the 'ftyp' atom followed by a file type. We just check for a
     // vaguely valid 'ftyp' atom.
+    if (aData->Length() < 8) {
+      return false;
+    }
     AtomParser parser(mType, aData);
+    if (!parser.IsValid()) {
+      return false;
+    }
     return parser.StartWithInitSegment();
   }
 
   bool IsMediaSegmentPresent(MediaByteBuffer* aData) override
   {
+    if (aData->Length() < 8) {
+      return false;
+    }
     AtomParser parser(mType, aData);
+    if (!parser.IsValid()) {
+      return false;
+    }
     return parser.StartWithMediaSegment();
   }
 
@@ -361,20 +374,48 @@ private:
       mp4_demuxer::ByteReader reader(aData);
       mp4_demuxer::AtomType initAtom("ftyp");
       mp4_demuxer::AtomType mediaAtom("moof");
+      mp4_demuxer::AtomType stypAtom("styp");
+      mp4_demuxer::AtomType sidxAtom("sidx");
+
+      // Valid top-level boxes defined in ISO/IEC 14496-12 (Table 1)
+      static const mp4_demuxer::AtomType validBoxes[] = {
+        "ftyp", "moov", // init segment
+        "pdin", "free", "sidx", // optional prior moov box
+        "styp", "moof", "mdat", // media segment
+        "mfra", "skip", "meta", "meco", "ssix", "prft" // others.
+        "pssh", // optional with encrypted EME, though ignored.
+        "emsg", // ISO23009-1:2014 Section 5.10.3.3
+        "bloc", "uuid" // boxes accepted by chrome.
+      };
 
       while (reader.Remaining() >= 8) {
         uint64_t size = reader.ReadU32();
         const uint8_t* typec = reader.Peek(4);
-        uint32_t type = reader.ReadU32();
+        mp4_demuxer::AtomType type(reader.ReadU32());
         MSE_DEBUGV(AtomParser ,"Checking atom:'%c%c%c%c' @ %u",
                    typec[0], typec[1], typec[2], typec[3],
                    (uint32_t)reader.Offset() - 8);
+
+        if (std::find(std::begin(validBoxes), std::end(validBoxes), type)
+            == std::end(validBoxes)) {
+          // No valid box found, no point continuing.
+          mLastInvalidBox[0] = typec[0];
+          mLastInvalidBox[1] = typec[1];
+          mLastInvalidBox[2] = typec[2];
+          mLastInvalidBox[3] = typec[3];
+          mLastInvalidBox[4] = '\0';
+          mValid = false;
+          break;
+        }
         if (mInitOffset.isNothing() &&
             mp4_demuxer::AtomType(type) == initAtom) {
           mInitOffset = Some(reader.Offset());
         }
-        if (mMediaOffset.isNothing() &&
-            mp4_demuxer::AtomType(type) == mediaAtom) {
+        if (mMediaOffset.isNothing() && (
+            mp4_demuxer::AtomType(type) == mediaAtom ||
+            mp4_demuxer::AtomType(type) == stypAtom ||
+            mp4_demuxer::AtomType(type) == sidxAtom
+            )) {
           mMediaOffset = Some(reader.Offset());
         }
         if (mInitOffset.isSome() && mMediaOffset.isSome()) {
@@ -401,19 +442,23 @@ private:
       reader.DiscardRemaining();
     }
 
-    bool StartWithInitSegment()
+    bool StartWithInitSegment() const
     {
       return mInitOffset.isSome() &&
         (mMediaOffset.isNothing() || mInitOffset.ref() < mMediaOffset.ref());
     }
-    bool StartWithMediaSegment()
+    bool StartWithMediaSegment() const
     {
       return mMediaOffset.isSome() &&
         (mInitOffset.isNothing() || mMediaOffset.ref() < mInitOffset.ref());
     }
+    bool IsValid() const { return mValid; }
+    const char* LastInvalidBox() const { return mLastInvalidBox; }
   private:
     Maybe<size_t> mInitOffset;
     Maybe<size_t> mMediaOffset;
+    bool mValid = true;
+    char mLastInvalidBox[5];
   };
 
 public:
@@ -539,8 +584,8 @@ public:
       return false;
     }
     size_t header_length = have_crc ? 9 : 7;
-    size_t data_length = (((*aData)[3] & 0x03) << 11) ||
-                         (((*aData)[4] & 0xff) << 3) ||
+    size_t data_length = (((*aData)[3] & 0x03) << 11) |
+                         (((*aData)[4] & 0xff) << 3) |
                          (((*aData)[5] & 0xe0) >> 5);
     uint8_t frames = ((*aData)[6] & 0x03) + 1;
     MOZ_ASSERT(frames > 0);

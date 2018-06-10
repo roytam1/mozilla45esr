@@ -104,7 +104,7 @@ TrackBuffersManager::TrackBuffersManager(dom::SourceBufferAttributes* aAttribute
   , mParentDecoder(new nsMainThreadPtrHolder<MediaSourceDecoder>(aParentDecoder, false /* strict */))
   , mEvictionThreshold(Preferences::GetUint("media.mediasource.eviction_threshold",
                                             100 * (1 << 20)))
-  , mEvictionOccurred(false)
+  , mEvictionState(EvictionState::NO_EVICTION_NEEDED)
   , mMonitor("TrackBuffersManager")
   , mAppendRunning(false)
 {
@@ -209,18 +209,28 @@ TrackBuffersManager::EvictData(TimeUnit aPlaybackTime,
 
   int64_t toEvict = GetSize() - aThreshold;
   if (toEvict <= 0) {
+    mEvictionState = EvictionState::NO_EVICTION_NEEDED;
     return EvictDataResult::NO_DATA_EVICTED;
   }
   if (toEvict <= 512*1024) {
     // Don't bother evicting less than 512KB.
+    mEvictionState = EvictionState::NO_EVICTION_NEEDED;
     return EvictDataResult::CANT_EVICT;
   }
 
-  if (mBufferFull && mEvictionOccurred) {
-    return EvictDataResult::BUFFER_FULL;
+  EvictDataResult result;
+
+  if (mBufferFull && mEvictionState == EvictionState::EVICTION_COMPLETED) {
+    // Our buffer is currently full. We will make another eviction attempt.
+    // However, the current appendBuffer will fail as we can't know ahead of
+    // time if the eviction will later succeed.
+    result = EvictDataResult::BUFFER_FULL;
+  } else {
+    mEvictionState = EvictionState::EVICTION_NEEDED;
+    result = EvictDataResult::NO_DATA_EVICTED;
   }
 
-  MSE_DEBUG("Reaching our size limit, schedule eviction of %lld bytes", toEvict);
+  MSE_DEBUG("Reached our size limit, schedule eviction of %lld bytes", toEvict);
 
   nsCOMPtr<nsIRunnable> task =
     NS_NewRunnableMethodWithArgs<TimeUnit, uint32_t>(
@@ -228,7 +238,7 @@ TrackBuffersManager::EvictData(TimeUnit aPlaybackTime,
       aPlaybackTime, toEvict);
   GetTaskQueue()->Dispatch(task.forget());
 
-  return EvictDataResult::NO_DATA_EVICTED;
+  return result;
 }
 
 void
@@ -253,14 +263,14 @@ TrackBuffersManager::Buffered()
   // 2. Let highest end time be the largest track buffer ranges end time across all the track buffers managed by this SourceBuffer object.
   TimeUnit highestEndTime;
 
-  nsTArray<TimeIntervals*> tracks;
+  nsTArray<const TimeIntervals*> tracks;
   if (HasVideo()) {
     tracks.AppendElement(&mVideoBufferedRanges);
   }
   if (HasAudio()) {
     tracks.AppendElement(&mAudioBufferedRanges);
   }
-  for (auto trackRanges : tracks) {
+  for (const TimeIntervals* trackRanges : tracks) {
     highestEndTime = std::max(trackRanges->GetEnd(), highestEndTime);
   }
 
@@ -269,13 +279,16 @@ TrackBuffersManager::Buffered()
 
   // 4. For each track buffer managed by this SourceBuffer, run the following steps:
   //   1. Let track ranges equal the track buffer ranges for the current track buffer.
-  for (auto trackRanges : tracks) {
+  for (const TimeIntervals* trackRanges : tracks) {
     // 2. If readyState is "ended", then set the end time on the last range in track ranges to highest end time.
-    if (mEnded) {
-      trackRanges->Add(TimeInterval(trackRanges->GetEnd(), highestEndTime));
-    }
     // 3. Let new intersection ranges equal the intersection between the intersection ranges and the track ranges.
-    intersection.Intersection(*trackRanges);
+    if (mEnded) {
+      TimeIntervals tR = *trackRanges;
+      tR.Add(TimeInterval(tR.GetEnd(), highestEndTime));
+      intersection.Intersection(tR);
+    } else {
+      intersection.Intersection(*trackRanges);
+    }
   }
   return intersection;
 }
@@ -367,6 +380,8 @@ TrackBuffersManager::DoEvictData(const TimeUnit& aPlaybackTime,
 {
   MOZ_ASSERT(OnTaskQueue());
 
+  mEvictionState = EvictionState::EVICTION_COMPLETED;
+
   // Video is what takes the most space, only evict there if we have video.
   const auto& track = HasVideo() ? mVideoTracks : mAudioTracks;
   const auto& buffer = track.mBuffers.LastElement();
@@ -386,7 +401,7 @@ TrackBuffersManager::DoEvictData(const TimeUnit& aPlaybackTime,
       }
       partialEvict = 0;
     }
-    if (frame->mTime >= lowerLimit.ToMicroseconds()) {
+    if (frame->GetEndTime() >= lowerLimit.ToMicroseconds()) {
       break;
     }
     partialEvict += frame->ComputedSizeOfIncludingThis();
@@ -408,11 +423,21 @@ TrackBuffersManager::DoEvictData(const TimeUnit& aPlaybackTime,
 
   toEvict = mSizeSourceBuffer - finalSize;
 
-  // Still some to remove. Remove data starting from the end, up to 30s ahead
-  // of the later of the playback time or the next sample to be demuxed.
-  // 30s is a value chosen as it appears to work with YouTube.
-  TimeUnit upperLimit =
-    std::max(aPlaybackTime, track.mNextSampleTime) + TimeUnit::FromSeconds(30);
+  // See if we can evict data into the future.
+  // We do not evict data from the currently used buffered interval.
+
+  TimeUnit currentPosition = std::max(aPlaybackTime, track.mNextSampleTime);
+  TimeIntervals futureBuffered(TimeInterval(currentPosition, TimeUnit::FromInfinity()));
+  futureBuffered.Intersection(track.mBufferedRanges);
+  futureBuffered.SetFuzz(MediaSourceDemuxer::EOS_FUZZ / 2);
+  if (futureBuffered.Length() <= 1) {
+    // We have one continuous segment ahead of us:
+    // nothing further can be evicted.
+    return;
+  }
+
+  // Don't evict before the end of the current segment
+  TimeUnit upperLimit = futureBuffered[0].mEnd;
   uint32_t evictedFramesStartIndex = buffer.Length();
   for (int32_t i = buffer.Length() - 1; i >= 0; i--) {
     const auto& frame = buffer[i];
@@ -515,7 +540,6 @@ TrackBuffersManager::CodedFrameRemoval(TimeInterval aInterval)
   if (mBufferFull && mSizeSourceBuffer < mEvictionThreshold) {
     mBufferFull = false;
   }
-  mEvictionOccurred = true;
 
   return dataRemoved;
 }
@@ -1265,7 +1289,6 @@ fprintf(stderr, "track %i timecode %lld /// track %i timecode %lld\n",
   // 4. If this SourceBuffer is full and cannot accept more media data, then set the buffer full flag to true.
   if (mSizeSourceBuffer >= mEvictionThreshold) {
     mBufferFull = true;
-    mEvictionOccurred = false;
   }
 
   // 5. If the input buffer does not contain a complete media segment, then jump to the need more data step below.
@@ -1676,6 +1699,8 @@ TrackBuffersManager::RemoveFrames(const TimeIntervals& aIntervals,
   //   Remove all coded frames from track buffer that have a presentation timestamp greater than or equal to presentation timestamp and less than frame end timestamp.
   //  If highest end timestamp for track buffer is set and less than or equal to presentation timestamp:
   //   Remove all coded frames from track buffer that have a presentation timestamp greater than or equal to highest end timestamp and less than frame end timestamp"
+  TimeUnit intervalsEnd = aIntervals.GetEnd();
+  bool mayBreakLoop = false;
   for (uint32_t i = aStartIndex; i < data.Length(); i++) {
     const RefPtr<MediaRawData> sample = data[i];
     TimeInterval sampleInterval =
@@ -1686,6 +1711,14 @@ TrackBuffersManager::RemoveFrames(const TimeIntervals& aIntervals,
         firstRemovedIndex = Some(i);
       }
       lastRemovedIndex = i;
+      mayBreakLoop = false;
+      continue;
+    }
+    if (sample->mKeyframe && mayBreakLoop) {
+      break;
+    }
+    if (sampleInterval.mStart > intervalsEnd) {
+      mayBreakLoop = true;
     }
   }
 
