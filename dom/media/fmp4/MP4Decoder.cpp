@@ -64,7 +64,7 @@ IsWhitelistedH264Codec(const nsAString& aCodec)
     return false;
   }
 
-#ifdef XP_WIN
+#if 0//def XP_WIN
   // Disable 4k video on windows vista since it performs poorly.
   if (!IsWin7OrLater() &&
       level >= H264_LEVEL_5) {

@@ -24,6 +24,7 @@
 #include "GMPDecoderModule.h"
 
 #include "mozilla/Preferences.h"
+#include "mozilla/WindowsVersion.h"
 #include "mozilla/TaskQueue.h"
 
 #include "mozilla/SharedThreadPool.h"
@@ -112,7 +113,7 @@ PDMFactory::Init()
 #ifdef MOZ_APPLEMEDIA
   AppleDecoderModule::Init();
 #endif
-#ifdef MOZ_FFMPEG
+#if defined(MOZ_FFMPEG) && !defined(XP_WIN)
   FFmpegRuntimeLinker::Link();
 #endif
   GMPDecoderModule::Init();
@@ -257,7 +258,7 @@ PDMFactory::CreatePDMs()
   }
 #endif
 #ifdef XP_WIN
-  if (sWMFDecoderEnabled) {
+  if (IsVistaOrLater() && !Preferences::GetBool("media.ffmpeg.enabled", false) && sWMFDecoderEnabled) {
     m = new WMFDecoderModule();
     StartupPDM(m);
   }

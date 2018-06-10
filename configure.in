@@ -5232,7 +5232,7 @@ dnl ========================================================
 dnl FFmpeg H264/AAC Decoding Support
 dnl ========================================================
 case "$OS_TARGET" in
-WINNT|Darwin|Android)
+Darwin|Android)
     ;;
 *)
     MOZ_FFMPEG=1
