@@ -6374,7 +6374,12 @@ IonBuilder::jsop_funapply(uint32_t argc)
     if (argument->type() != MIRType_MagicOptimizedArguments) {
         // Optimize fun.apply(self, array) if the length is sane and there are no holes.
         TemporaryTypeSet* objTypes = argument->resultTypeSet();
-        if (native && native->isNative() && native->native() == fun_apply &&
+#ifdef XP_WIN
+        bool opt = false;
+#else
+        bool opt = true;
+#endif
+        if (opt && native && native->isNative() && native->native() == fun_apply &&
             objTypes &&
             objTypes->getKnownClass(constraints()) == &ArrayObject::class_ &&
             !objTypes->hasObjectFlags(constraints(), OBJECT_FLAG_LENGTH_OVERFLOW) &&

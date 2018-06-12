@@ -372,10 +372,12 @@ class ExecutableAllocator
 
     static void makeWritable(void* start, size_t size)
     {
+        ReprotectRegion(start, size, ProtectionSetting::Writable);
     }
 
     static void makeExecutable(void* start, size_t size)
     {
+        ReprotectRegion(start, size, ProtectionSetting::Executable);
     }
 
 #if defined(JS_CODEGEN_X86) || defined(JS_CODEGEN_X64)

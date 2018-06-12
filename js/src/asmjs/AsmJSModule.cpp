@@ -18,6 +18,7 @@
 
 #include "asmjs/AsmJSModule.h"
 
+#include "mozilla/Atomics.h"
 #include "mozilla/BinarySearch.h"
 #include "mozilla/Compression.h"
 #include "mozilla/EnumeratedRange.h"
@@ -51,6 +52,7 @@ using namespace js;
 using namespace js::jit;
 using namespace js::wasm;
 using namespace js::frontend;
+using mozilla::Atomic;
 using mozilla::BinarySearch;
 using mozilla::Compression::LZ4;
 using mozilla::MakeEnumeratedRange;
@@ -61,6 +63,12 @@ using mozilla::PodZero;
 using mozilla::Swap;
 using JS::GenericNaN;
 
+// Limit the number of concurrent wasm code allocations per process. Note that
+// on Linux, the real maximum is ~32k, as each module requires 2 maps (RW/RX),
+// and the kernel's default max_map_count is ~65k.
+static Atomic<uint32_t> wasmCodeAllocations(0);
+static const uint32_t MaxWasmCodeAllocations = 16384;
+
 static uint8_t*
 AllocateExecutableMemory(ExclusiveContext* cx, size_t bytes)
 {
@@ -68,9 +76,14 @@ AllocateExecutableMemory(ExclusiveContext* cx, size_t bytes)
     // a multiple of ExecutableCodePageSize.
     bytes = JS_ROUNDUP(bytes, ExecutableCodePageSize);
 
-    void* p = AllocateExecutableMemory(bytes, ProtectionSetting::Writable);
-    if (!p)
+    void* p = nullptr;
+    if (wasmCodeAllocations++ < MaxWasmCodeAllocations)
+        p = AllocateExecutableMemory(bytes, ProtectionSetting::Writable);
+    if (!p) {
+        wasmCodeAllocations--;
         ReportOutOfMemory(cx);
+    }
+
     return (uint8_t*)p;
 }
 
@@ -122,6 +135,8 @@ AsmJSModule::~AsmJSModule()
         }
 
         uint32_t size = JS_ROUNDUP(pod.totalBytes_, ExecutableCodePageSize);
+        MOZ_ASSERT(wasmCodeAllocations > 0);
+        wasmCodeAllocations--;
         DeallocateExecutableMemory(code_, size);
     }
 

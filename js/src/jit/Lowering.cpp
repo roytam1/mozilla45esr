@@ -2304,17 +2304,7 @@ LIRGenerator::visitFunctionEnvironment(MFunctionEnvironment* ins)
 void
 LIRGenerator::visitInterruptCheck(MInterruptCheck* ins)
 {
-    // Implicit interrupt checks require asm.js signal handlers to be installed.
-    // They also require writable JIT code: reprotecting in patchIonBackedges
-    // would be expensive and using AutoWritableJitCode in the signal handler
-    // is complicated because there could be another AutoWritableJitCode on the
-    // stack.
-    LInstructionHelper<0, 0, 0>* lir;
-    if (GetJitContext()->runtime->canUseSignalHandlers()) {
-        lir = new(alloc()) LInterruptCheckImplicit();
-    } else {
-        lir = new(alloc()) LInterruptCheck();
-    }
+    LInstructionHelper<0, 0, 0>* lir = new(alloc()) LInterruptCheck();
     add(lir, ins);
     assignSafepoint(lir, ins);
 }
