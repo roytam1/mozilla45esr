@@ -8471,12 +8471,6 @@ if test -n "$MOZ_SERVICES_CRYPTO"; then
   AC_DEFINE(MOZ_SERVICES_CRYPTO)
 fi
 
-dnl Build Firefox Health Reporter Service
-AC_SUBST(MOZ_SERVICES_HEALTHREPORT)
-if test -n "$MOZ_SERVICES_HEALTHREPORT"; then
-  AC_DEFINE(MOZ_SERVICES_HEALTHREPORT)
-fi
-
 dnl Build Services metrics component
 AC_SUBST(MOZ_SERVICES_METRICS)
 if test -n "$MOZ_SERVICES_METRICS"; then
@@ -8812,15 +8806,6 @@ if test "$MOZ_TELEMETRY_REPORTING"; then
     if test -z "$RELEASE_BUILD"; then
       AC_DEFINE(MOZ_TELEMETRY_ON_BY_DEFAULT)
     fi
-fi
-
-dnl If we have any service that uploads data (and requires data submission
-dnl policy alert), set MOZ_DATA_REPORTING.
-dnl We need SUBST for build system and DEFINE for xul preprocessor.
-if test -n "$MOZ_TELEMETRY_REPORTING" || test -n "$MOZ_SERVICES_HEALTHREPORT" || test -n "$MOZ_CRASHREPORTER"; then
-  MOZ_DATA_REPORTING=1
-  AC_DEFINE(MOZ_DATA_REPORTING)
-  AC_SUBST(MOZ_DATA_REPORTING)
 fi
 
 dnl win32 options

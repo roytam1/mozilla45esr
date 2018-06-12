@@ -1632,9 +1632,12 @@ pref("dom.webnotifications.serviceworker.enabled", true);
 pref("toolkit.pageThumbs.minWidth", 280);
 pref("toolkit.pageThumbs.minHeight", 190);
 
-#ifdef NIGHTLY_BUILD
-// Enable speech synthesis, only Nightly for now
-pref("media.webspeech.synth.enabled", true);
-#endif
-
 pref("browser.esedbreader.loglevel", "Error");
+
+// custom settings
+pref("browser.urlbar.userMadeSearchSuggestionsChoice", true);
+pref("browser.urlbar.suggest.searches", false);
+pref("media.mediasource.enabled", true);
+pref("media.mediasource.mp4.enabled", true);
+pref("media.mediasource.webm.audio.enabled", true);
+pref("media.mediasource.webm.enabled", true);
