@@ -26,8 +26,7 @@ nsWEBPDecoder::nsWEBPDecoder(RasterImage* aImage)
   : Decoder(aImage)
   , mDecoder(nullptr)
   , mLastLine(0)
-  , mWidth(0)
-  , mHeight(0)
+  , mHasTransparency(false)
   , haveSize(false)
 {
   MOZ_LOG(gWEBPDecoderAccountingLog, LogLevel::Debug,
@@ -57,7 +56,8 @@ nsWEBPDecoder::InitInternal()
 
   MOZ_ASSERT(!mImageData, "Already have a buffer allocated?");
   if(!mImageData && haveSize) {
-    PostSize(mWidth, mHeight);
+    if(mHasTransparency) PostHasTransparency();
+    PostSize(mDecBuf.width, mDecBuf.height);
     nsresult rv_ = AllocateBasicFrame();
     if (NS_FAILED(rv_)) {
         return;
@@ -107,18 +107,17 @@ nsWEBPDecoder::WriteInternal(const char* aBuffer, uint32_t aCount)
         return;
       }
       if (features.has_alpha) {
+        mHasTransparency = true;
         PostHasTransparency();
       }
       // Post our size to the superclass
       if (IsMetadataDecode()) {
         PostSize(features.width, features.height);
       }
-      mWidth = features.width;
-      mHeight = features.height;
-      mDecBuf.width = mWidth;
-      mDecBuf.height = mHeight;
-      mDecBuf.u.RGBA.stride = mWidth * sizeof(uint32_t);
-      mDecBuf.u.RGBA.size = mDecBuf.u.RGBA.stride * mHeight;
+      mDecBuf.width = features.width;
+      mDecBuf.height = features.height;
+      mDecBuf.u.RGBA.stride = mDecBuf.width * sizeof(uint32_t);
+      mDecBuf.u.RGBA.size = mDecBuf.u.RGBA.stride * mDecBuf.height;
       haveSize = true;
     } else if (rv != VP8_STATUS_NOT_ENOUGH_DATA) {
       PostDecoderError(NS_ERROR_FAILURE);
@@ -133,7 +132,8 @@ nsWEBPDecoder::WriteInternal(const char* aBuffer, uint32_t aCount)
 
   MOZ_ASSERT(!mImageData, "Already have a buffer allocated?");
   if(!mImageData && haveSize) {
-    PostSize(mWidth, mHeight);
+    if(mHasTransparency) PostHasTransparency();
+    PostSize(mDecBuf.width, mDecBuf.height);
     nsresult rv_ = AllocateBasicFrame();
     if (NS_FAILED(rv_)) {
         return;
