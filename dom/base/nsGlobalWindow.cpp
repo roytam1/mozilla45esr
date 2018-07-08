@@ -1234,7 +1234,6 @@ nsGlobalWindow::nsGlobalWindow(nsGlobalWindow *aOuterWindow)
                                  "dom.idle-observers-api.fuzz_time.disabled",
                                  false);
 
-#if defined(XP_MACOSX)
     // Precompute variables for Mach factor/load monitoring and idle callbacks
     // (TenFourFox issue 463).
     Preferences::AddIntVarCache(&sMachFactorMin,
@@ -1246,6 +1245,7 @@ nsGlobalWindow::nsGlobalWindow(nsGlobalWindow *aOuterWindow)
     Preferences::AddIntVarCache(&sIdleCallbackIdleInterval,
                                 "tenfourfox.dom.requestIdleCallback.idle_interval",
                                 CALLBACK_IDLE_INTERVAL);
+#if defined(XP_MACOSX)
     sMachHost = mach_host_self();
     kern_return_t ret = processor_set_default(sMachHost, &sMachDefaultPset);
     if (ret != KERN_SUCCESS) {
@@ -11584,6 +11584,18 @@ nsGlobalWindow::SetInterval(JSContext* aCx, const nsAString& aHandler,
 
 // TenFourFox issue 463
 
+#if defined(XP_WIN)
+#include <windows.h>
+#undef _WINDOWS_
+
+int CompareFileTime(FILETIME time2, FILETIME time1)
+{
+  uint64_t a = (uint64_t)time1.dwHighDateTime << 32 | time1.dwLowDateTime ;
+  uint64_t b = (uint64_t)time2.dwHighDateTime << 32 | time2.dwLowDateTime ;
+  return int(b - a);
+}
+#endif
+
 static bool
 SystemIsIdle()
 {
@@ -11597,6 +11609,32 @@ SystemIsIdle()
   if (kr != KERN_SUCCESS) return true;
 
   return (sMachLoadInfo.mach_factor > sMachFactorMin);
+#elif defined(XP_WIN)
+  static FILETIME last_idleTime;
+  static FILETIME last_kernelTime;
+  static FILETIME last_userTime;
+  FILETIME idleTime;
+  FILETIME kernelTime;
+  FILETIME userTime;
+  BOOL res;
+  unsigned long sys, idl;
+
+  // init values
+  if(!last_idleTime.dwLowDateTime) res = GetSystemTimes(&last_idleTime, &last_kernelTime, &last_userTime);
+  res = GetSystemTimes(&idleTime, &kernelTime, &userTime);
+
+  // calcuate time values
+  sys = CompareFileTime(userTime, last_userTime) + CompareFileTime(kernelTime, last_kernelTime);
+  idl = CompareFileTime(idleTime, last_idleTime);
+
+  // keep value for future use
+  last_idleTime = idleTime;
+  last_kernelTime = kernelTime;
+  last_userTime = userTime;
+
+  // mach_factor is 1000-based value, mach_factor of completely idled 1-CPU system is 1000
+  if(sys) return (int(1000 - ((sys - idl) * 1000 / sys) ) > sMachFactorMin);
+  else return false;
 #else
   return false; // XXX: Unimplemented
 #endif
