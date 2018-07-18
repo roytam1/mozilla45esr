@@ -477,6 +477,7 @@ nsNSSHttpRequestSession::internal_send_receive_attempt(bool &retryable_error,
     }
   }
 
+#if(0)
   if (!event->mStartTime.IsNull()) {
     if (request_canceled) {
       Telemetry::Accumulate(Telemetry::CERT_VALIDATION_HTTP_REQUEST_RESULT, 0);
@@ -501,6 +502,7 @@ nsNSSHttpRequestSession::internal_send_receive_attempt(bool &retryable_error,
   else {
     Telemetry::Accumulate(Telemetry::CERT_VALIDATION_HTTP_REQUEST_RESULT, 3);
   }
+#endif
 
   if (request_canceled)
     return SECFailure;
@@ -921,7 +923,7 @@ PreliminaryHandshakeDone(PRFileDesc* fd)
     else {
       infoObject->SetNegotiatedNPN(nullptr, 0);
     }
-    mozilla::Telemetry::Accumulate(Telemetry::SSL_NPN_TYPE, state);
+    //mozilla::Telemetry::Accumulate(Telemetry::SSL_NPN_TYPE, state);
   }
   else {
     infoObject->SetNegotiatedNPN(nullptr, 0);
@@ -1015,8 +1017,8 @@ CanFalseStartCallback(PRFileDesc* fd, void* client_data, PRBool *canFalseStart)
     }
   }
 
-  Telemetry::Accumulate(Telemetry::SSL_REASONS_FOR_NOT_FALSE_STARTING,
-                        reasonsForNotFalseStarting);
+  //Telemetry::Accumulate(Telemetry::SSL_REASONS_FOR_NOT_FALSE_STARTING,
+  //                      reasonsForNotFalseStarting);
 
   if (reasonsForNotFalseStarting == 0) {
     *canFalseStart = PR_TRUE;
