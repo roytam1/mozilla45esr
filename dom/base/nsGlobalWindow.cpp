@@ -264,8 +264,8 @@ class nsIScriptTimeoutHandler;
 // which also uses Mach factor analysis to determine load, because most
 // calls will have a max timeout and thus the function is likely to run at
 // *some* point.
-static const int32_t MACH_FACTOR_MIN = 700;
-static const int32_t MACH_CHECK_INTERVAL = 2000;
+static const int32_t MACH_FACTOR_MIN = 900;
+static const int32_t MACH_CHECK_INTERVAL = 1000;
 // This number is actually in the W3C standard, but we allow it to be
 // adjusted.
 static const int32_t CALLBACK_IDLE_INTERVAL = 50;
@@ -276,7 +276,10 @@ static int32_t sIdleCallbackIdleInterval = CALLBACK_IDLE_INTERVAL;
 #include <mach/mach.h>
 #include <mach/mach_error.h>
 #include <mach/bootstrap.h>
+#include <sys/param.h>
+#include <sys/sysctl.h>
 static processor_set_name_port_t sMachDefaultPset;
+static uint32_t sNumCPUs;
 static struct processor_set_load_info sMachLoadInfo;
 static host_name_port_t sMachHost;
 #endif
@@ -1248,10 +1251,18 @@ nsGlobalWindow::nsGlobalWindow(nsGlobalWindow *aOuterWindow)
 #if defined(XP_MACOSX)
     sMachHost = mach_host_self();
     kern_return_t ret = processor_set_default(sMachHost, &sMachDefaultPset);
+    sNumCPUs = 1;
     if (ret != KERN_SUCCESS) {
       fprintf(stderr, "TenFourFox: Unable to initialize Mach idle monitoring: %i\n", (uint32_t)ret);
       sMachFactorMin = 0;
     }
+    int mib[2] = { CTL_HW, HW_NCPU };
+    size_t len = sizeof(sNumCPUs);
+    if (sysctl(mib, 2, &sNumCPUs, &len, NULL, 0) == -1)
+      sNumCPUs = 1;
+#if DEBUG
+    fprintf(stderr, "GlobalWindow: %i CPUs\n", sNumCPUs);
+#endif
 #endif
   }
 
@@ -11608,7 +11619,13 @@ SystemIsIdle()
       (processor_set_info_t)&sMachLoadInfo, &count);
   if (kr != KERN_SUCCESS) return true;
 
-  return (sMachLoadInfo.mach_factor > sMachFactorMin);
+#if DEBUG
+  fprintf(stderr, "SystemIsIdle(%i/%i: %s)\n",
+    sMachLoadInfo.mach_factor,
+    sMachFactorMin * sNumCPUs,
+   (sMachLoadInfo.mach_factor > (sMachFactorMin * sNumCPUs)) ? "true" : "false");
+#endif
+  return (sMachLoadInfo.mach_factor > (sMachFactorMin * sNumCPUs));
 #elif defined(XP_WIN)
   static FILETIME last_idleTime;
   static FILETIME last_kernelTime;
@@ -11632,7 +11649,9 @@ SystemIsIdle()
   last_kernelTime = kernelTime;
   last_userTime = userTime;
 
-  // mach_factor is 1000-based value, mach_factor of completely idled 1-CPU system is 1000
+  // mach_factor is 1000-based value multiplies CPU core count
+  // mach_factor of completely idled 1-CPU system is 1000, for 2-CPU system is 2000, etc.
+  // for win32, GetSystemTimes() returns unified value
   if(sys) return (int(1000 - ((sys - idl) * 1000 / sys) ) > sMachFactorMin);
   else return false;
 #else
@@ -11686,6 +11705,9 @@ nsGlobalWindow::SetTimeoutOrIntervalOrIdleCallback(nsIScriptTimeoutHandler *aHan
     timeout->mDeadline = interval;
     timeout->mScriptHandler = nullptr;
 
+// XXX: Current logic short circuits this and simply makes idle callbacks
+// into fixed timeouts.
+#if(0)
     // If RequestIdleCallback says this is not an interval, then it must
     // want it to run right away. Otherwise schedule the idle checks.
     if (aIsInterval) {
@@ -11693,6 +11715,9 @@ nsGlobalWindow::SetTimeoutOrIntervalOrIdleCallback(nsIScriptTimeoutHandler *aHan
     } else
       interval = 0;
     timeout->mInterval = interval;
+#else
+    // Leave interval as it is
+#endif
   } else {
     timeout->mInterval = interval;
     timeout->mCallback = nullptr;
@@ -12191,7 +12216,12 @@ nsGlobalWindow::RunTimeout(nsTimeout *aTimeout)
       timeout->mElapsed += timeout->mInterval;
       if (!timeout->mInterval || timeout->mElapsed >= timeout->mDeadline || SystemIsIdle()) {
         rescheduleOk = false;
+        timeout->mIsInterval = false; // don't reschedule
         timeout_was_cleared = RunTimeoutHandler(timeout, scx);
+        if (timeout->mTimer) {
+          timeout->mTimer->Cancel();
+          timeout->mTimer = nullptr;
+        }
       }
     } else
       timeout_was_cleared = RunTimeoutHandler(timeout, scx);
@@ -14050,13 +14080,20 @@ nsGlobalWindow::RequestIdleCallback(JSContext* aCx,
 {
   MOZ_RELEASE_ASSERT(IsInnerWindow());
   AssertIsOnMainThread();
-  int32_t handle = -1, timeout = 3600000; /* default 60 minutes */
+  int32_t handle = -1, timeout = 5000; /* default 5 seconds */
   nsresult rv;
 
   if (aOptions.mTimeout.WasPassed())
     timeout = aOptions.mTimeout.Value();
 
-  if (SystemIsIdle()) {
+// XXX: Deferring initial run of the callback beyond the timeout period
+// invariably causes problems. But if a timeout was specified, we can
+// generally assume it's safe to hit that.
+
+  if (1) { // SystemIsIdle()) {
+#if DEBUG
+    fprintf(stderr, "Idle callback initialized, timeout %d ms\n", timeout);
+#endif
     // The computer is already idle, so we will run the callback now.
     rv = SetTimeoutOrIntervalOrIdleCallback(nullptr, timeout, false, &handle,
                                             &aCallback);
@@ -14065,6 +14102,7 @@ nsGlobalWindow::RequestIdleCallback(JSContext* aCx,
     rv = SetTimeoutOrIntervalOrIdleCallback(nullptr, timeout, true, &handle,
                                             &aCallback);
   }
+
   if (NS_SUCCEEDED(rv))
     return handle;
 
@@ -14079,7 +14117,7 @@ nsGlobalWindow::CancelIdleCallback(uint32_t aHandle)
   ErrorResult ignored;
 
   // XXX: As written, this is just an alias for clearTimeout(), so
-  // web scripts could call either to clear any time of timeout
+  // web scripts could call either to clear any type of timeout
   // or interval. Do we care?
 
   if (aHandle > 0) {
