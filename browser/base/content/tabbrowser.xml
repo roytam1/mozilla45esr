@@ -1742,6 +1742,7 @@
             var aForceNotRemote;
             var aNoReferrer;
             var aUserContextId;
+            var aSkipBackgroundNotify;
             if (arguments.length == 2 &&
                 typeof arguments[1] == "object" &&
                 !(arguments[1] instanceof Ci.nsIURI)) {
@@ -1759,6 +1760,7 @@
               aForceNotRemote       = params.forceNotRemote;
               aNoReferrer           = params.noReferrer;
               aUserContextId        = params.userContextId;
+              aSkipBackgroundNotify = params.skipBackgroundNotify;
             }
 
             // if we're adding tabs, we're past interrupt mode, ditch the owner
@@ -1773,6 +1775,11 @@
               t.setAttribute("usercontextid", aUserContextId);
             t.setAttribute("crop", "end");
             t.setAttribute("onerror", "this.removeAttribute('image');");
+
+            if (aSkipBackgroundNotify) {
+              t.setAttribute("skipbackgroundnotify", true);
+            }
+
             t.className = "tabbrowser-tab";
 
             // The new browser should be remote if this is an e10s window and
@@ -5145,10 +5152,10 @@
                                                  selected.left - scrollRect.left);
           }
 
-          if (!this._animateElement.hasAttribute("notifybgtab")) {
-            this._animateElement.setAttribute("notifybgtab", "true");
+          if (!this._animateElement.hasAttribute("highlight")) {
+            this._animateElement.setAttribute("highlight", "true");
             setTimeout(function (ele) {
-              ele.removeAttribute("notifybgtab");
+              ele.removeAttribute("highlight");
             }, 150, this._animateElement);
           }
         ]]></body>
@@ -5239,7 +5246,7 @@
           if (tab.getAttribute("selected") == "true") {
             //this._fillTrailingGap();
             this._handleTabSelect();
-          } else {
+          } else if (!tab.hasAttribute("skipbackgroundnotify")) {
             this._notifyBackgroundTab(tab);
           }
 

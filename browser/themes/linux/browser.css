@@ -1564,7 +1564,7 @@ richlistitem[type~="action"][actiontype$="tab"] > .ac-url-box > .ac-action-icon 
   transition: 1s background-color ease-out;
 }
 
-.tabbrowser-arrowscrollbox > .scrollbutton-down[notifybgtab] {
+.tabbrowser-arrowscrollbox > .scrollbutton-down[highlight] {
   background-color: Highlight;
   transition: none;
 }
