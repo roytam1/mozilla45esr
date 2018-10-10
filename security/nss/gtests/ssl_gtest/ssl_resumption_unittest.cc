@@ -18,7 +18,8 @@ extern "C" {
 }
 
 #include "gtest_utils.h"
-#include "scoped_ptrs.h"
+#include "nss_scoped_ptrs.h"
+#include "scoped_ptrs_ssl.h"
 #include "tls_connect.h"
 #include "tls_filter.h"
 #include "tls_parser.h"
@@ -544,6 +545,37 @@ TEST_P(TlsConnectTls13, TestTls13ResumeNoCertificateRequest) {
 
   // Sanity check whether the client certificate matches the one
   // decrypted from ticket.
+  ScopedCERTCertificate cert2(SSL_PeerCertificate(server_->ssl_fd()));
+  EXPECT_TRUE(SECITEM_ItemsAreEqual(&cert1->derCert, &cert2->derCert));
+}
+
+// Here we test that 0.5 RTT is available at the server when resuming, even if
+// configured to request a client certificate.  The resumed handshake relies on
+// the authentication from the original handshake, so no certificate is
+// requested this time around.  The server can write before the handshake
+// completes because the PSK binder is sufficient authentication for the client.
+TEST_P(TlsConnectTls13, WriteBeforeHandshakeCompleteOnResumption) {
+  ConfigureSessionCache(RESUME_BOTH, RESUME_TICKET);
+  client_->SetupClientAuth();
+  server_->RequestClientAuth(true);
+  Connect();
+  SendReceive();  // Absorb the session ticket.
+  ScopedCERTCertificate cert1(SSL_LocalCertificate(client_->ssl_fd()));
+
+  Reset();
+  ConfigureSessionCache(RESUME_BOTH, RESUME_TICKET);
+  ExpectResumption(RESUME_TICKET);
+  server_->RequestClientAuth(false);
+  StartConnect();
+  client_->Handshake();  // ClientHello
+  server_->Handshake();  // ServerHello
+
+  server_->SendData(10);
+  client_->ReadBytes(10);  // Client should emit the Finished as a side-effect.
+  server_->Handshake();    // Server consumes the Finished.
+  CheckConnected();
+
+  // Check whether the client certificate matches the one from the ticket.
   ScopedCERTCertificate cert2(SSL_PeerCertificate(server_->ssl_fd()));
   EXPECT_TRUE(SECITEM_ItemsAreEqual(&cert1->derCert, &cert2->derCert));
 }
