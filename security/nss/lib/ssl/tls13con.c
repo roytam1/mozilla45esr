@@ -1573,6 +1573,13 @@ tls13_HandleClientHelloPart2(sslSocket *ss,
     const sslNamedGroupDef *previousGroup = NULL;
     PRBool hrr = PR_FALSE;
 
+    /* If the legacy_version field is set to 0x300 or smaller,
+     * reject the connection with protocol_version alert. */
+    if (ss->clientHelloVersion <= SSL_LIBRARY_VERSION_3_0) {
+        FATAL_ERROR(ss, SSL_ERROR_RX_MALFORMED_CLIENT_HELLO, protocol_version);
+        goto loser;
+    }
+
     ss->ssl3.hs.endOfFlight = PR_TRUE;
 
     if (ssl3_ExtensionNegotiated(ss, ssl_tls13_early_data_xtn)) {
@@ -5016,16 +5023,6 @@ tls13_UnprotectRecord(sslSocket *ss,
                 SSL_GETPID(), ss->fd, spec, spec->epoch, spec->phase,
                 cText->seqNum, cText->buf->len));
 
-    /* We can perform this test in variable time because the record's total
-     * length and the ciphersuite are both public knowledge. */
-    if (cText->buf->len < cipher_def->tag_size) {
-        SSL_TRC(3,
-                ("%d: TLS13[%d]: record too short to contain valid AEAD data",
-                 SSL_GETPID(), ss->fd));
-        PORT_SetError(SSL_ERROR_BAD_MAC_READ);
-        return SECFailure;
-    }
-
     /* Verify that the content type is right, even though we overwrite it.
      * Also allow the DTLS short header in TLS 1.3. */
     if (!(cText->hdr[0] == ssl_ct_application_data ||
@@ -5035,7 +5032,17 @@ tls13_UnprotectRecord(sslSocket *ss,
         SSL_TRC(3,
                 ("%d: TLS13[%d]: record has invalid exterior type=%2.2x",
                  SSL_GETPID(), ss->fd, cText->hdr[0]));
-        /* Do we need a better error here? */
+        PORT_SetError(SSL_ERROR_RX_UNEXPECTED_RECORD_TYPE);
+        *alert = unexpected_message;
+        return SECFailure;
+    }
+
+    /* We can perform this test in variable time because the record's total
+     * length and the ciphersuite are both public knowledge. */
+    if (cText->buf->len < cipher_def->tag_size) {
+        SSL_TRC(3,
+                ("%d: TLS13[%d]: record too short to contain valid AEAD data",
+                 SSL_GETPID(), ss->fd));
         PORT_SetError(SSL_ERROR_BAD_MAC_READ);
         return SECFailure;
     }
