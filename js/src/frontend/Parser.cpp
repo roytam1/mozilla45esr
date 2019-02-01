@@ -4583,10 +4583,10 @@ Parser<ParseHandler>::declarationPattern(Node decl, TokenKind tt, BindData<Parse
         if (*forHeadKind != PNK_FORHEAD) {
             // |for (const ... in ...);| and |for (const ... of ...);| are
             // syntax errors for now.  We'll fix this in bug 449811.
-            if (handler.declarationIsConst(decl)) {
+            /*if (handler.declarationIsConst(decl)) {
                 report(ParseError, false, pattern, JSMSG_BAD_CONST_DECL);
                 return null();
-            }
+            }*/
 
             if (!checkDestructuringPattern(data, pattern))
                 return null();
@@ -4788,7 +4788,7 @@ Parser<ParseHandler>::declarationName(Node decl, TokenKind tt, BindData<ParseHan
             if (isForIn || isForOf) {
                 // XXX Uncomment this when fixing bug 449811.  Until then,
                 //     |for (const ... in/of ...)| remains an error.
-                //constRequiringInitializer = false;
+                constRequiringInitializer = false;
 
                 *forHeadKind = isForIn ? PNK_FORIN : PNK_FOROF;
             } else {
