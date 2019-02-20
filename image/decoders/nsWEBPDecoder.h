@@ -67,8 +67,12 @@ private:
   WebPIDecoder* mDecoder;  // Pointer to Incremental WebP Decoder.
   WebPDecBuffer mDecBuf;   // Decoder buffer for output RGBA data.
   int mLastLine;           // Last image scan-line read so far.
-  bool mHasTransparency;   // Image Height
+  int mWidth;              // Image Width
+  int mHeight;             // Image Height
   bool haveSize;           // True if mDecBuf contains image dimension
+
+  qcms_profile* mProfile;  // embedded ICC profile
+  qcms_transform* mTransform; // resulting qcms transform
 };
 
 } // namespace image
