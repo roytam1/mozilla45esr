@@ -343,6 +343,7 @@ TrackBuffersManager::CompleteResetParserState()
   }
 
   // 7. Remove all bytes from the input buffer.
+  mPendingInputBuffer = nullptr;
   mIncomingBuffers.Clear();
   mInputBuffer = nullptr;
   if (mCurrentInputBuffer) {
