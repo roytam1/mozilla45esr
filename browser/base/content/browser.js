@@ -3237,6 +3237,10 @@ function BrowserReloadWithFlags(reloadFlags) {
     return;
   }
 
+  // Reset temporary permissions on the current tab. This is done here
+  // because we only want to reset permissions on user reload.
+  delete gBrowser.selectedBrowser.canceledAuthenticationPromptCounter;
+
   let windowUtils = window.QueryInterface(Ci.nsIInterfaceRequestor)
                           .getInterface(Ci.nsIDOMWindowUtils);
 

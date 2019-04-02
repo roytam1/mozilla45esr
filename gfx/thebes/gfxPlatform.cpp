@@ -2130,7 +2130,8 @@ gfxPlatform::IsInLayoutAsapMode()
 /* static */ bool
 gfxPlatform::ForceSoftwareVsync()
 {
-  return Preferences::GetInt("layout.frame_rate", -1) > 0;
+  // TenFourFox issue 446
+  return true; // return Preferences::GetInt("layout.frame_rate", -1) > 0;
 }
 
 /* static */ int
@@ -2147,12 +2148,14 @@ gfxPlatform::GetSoftwareVsyncRate()
 /* static */ int
 gfxPlatform::GetDefaultFrameRate()
 {
-  return 60;
+  return 30; // TenFourFox issue 446
 }
 
 void
 gfxPlatform::GetApzSupportInfo(mozilla::widget::InfoObject& aObj)
 {
+  return;
+
   if (!gfxPlatform::AsyncPanZoomEnabled()) {
     return;
   }

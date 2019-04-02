@@ -2655,6 +2655,7 @@
         <parameter name="aTab"/>
         <body>
           <![CDATA[
+            delete this.getBrowserForTab(aTab).canceledAuthenticationPromptCounter;
             this.getBrowserForTab(aTab).reload();
           ]]>
         </body>
