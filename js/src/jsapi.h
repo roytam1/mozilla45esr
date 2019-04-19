@@ -2410,8 +2410,8 @@ struct JSPropertyDescriptor : public JS::Traceable {
       : obj(nullptr), attrs(0), getter(nullptr), setter(nullptr), value(JS::UndefinedValue())
     {}
 
-    static void trace(JSPropertyDescriptor* self, JSTracer* trc) { self->trace(trc); }
-    void trace(JSTracer* trc);
+    static JS_PUBLIC_API(void) trace(JSPropertyDescriptor* self, JSTracer* trc) { self->trace(trc); }
+    JS_PUBLIC_API(void) trace(JSTracer* trc);
 };
 
 namespace JS {
@@ -5660,7 +5660,7 @@ class AutoStopwatch;
  * provide a concrete implementation of this class, as well as the
  * relevant callbacks (see below).
  */
-struct PerformanceGroup {
+struct JS_PUBLIC_API(PerformanceGroup) {
     PerformanceGroup();
 
     // The current iteration of the event loop.

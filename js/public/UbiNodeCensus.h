@@ -80,7 +80,7 @@ struct Census;
 class CountBase;
 
 struct CountDeleter {
-    void operator()(CountBase*);
+    JS_PUBLIC_API(void) operator()(CountBase*);
 };
 
 using CountBasePtr = UniquePtr<CountBase, CountDeleter>;
@@ -172,7 +172,7 @@ struct Census {
 
     explicit Census(JSContext* cx) : cx(cx), atomsZone(nullptr) { }
 
-    bool init();
+    JS_PUBLIC_API(bool) init();
 
     // A 'new' work-alike that behaves like TempAllocPolicy: report OOM on this
     // census's context, but don't charge the memory allocated to our context's
@@ -206,7 +206,7 @@ class CensusHandler {
     // This class needs to retain no per-node data.
     class NodeData { };
 
-    bool operator() (BreadthFirst<CensusHandler>& traversal,
+    JS_PUBLIC_API(bool) operator() (BreadthFirst<CensusHandler>& traversal,
                      Node origin, const Edge& edge,
                      NodeData* referentData, bool first);
 };
@@ -215,7 +215,7 @@ using CensusTraversal = BreadthFirst<CensusHandler>;
 
 // Examine the census options supplied by the API consumer, and use that to
 // build a CountType tree.
-bool ParseCensusOptions(JSContext* cx, Census& census, HandleObject options,
+JS_PUBLIC_API(bool) ParseCensusOptions(JSContext* cx, Census& census, HandleObject options,
                         CountTypePtr& outResult);
 
 } // namespace ubi

@@ -166,7 +166,7 @@ static inline bool ShouldFailWithOOM() { return false; }
 namespace js {
 
 /* Disable OOM testing in sections which are not OOM safe. */
-struct MOZ_RAII AutoEnterOOMUnsafeRegion
+struct MOZ_RAII JS_PUBLIC_DATA(AutoEnterOOMUnsafeRegion)
 {
     MOZ_NORETURN MOZ_COLD void crash(const char* reason);
 

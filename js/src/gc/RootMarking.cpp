@@ -188,7 +188,7 @@ StackShape::trace(JSTracer* trc)
         TraceRoot(trc, (JSObject**)&rawSetter, "StackShape setter");
 }
 
-void
+JS_PUBLIC_API(void)
 JSPropertyDescriptor::trace(JSTracer* trc)
 {
     if (obj)

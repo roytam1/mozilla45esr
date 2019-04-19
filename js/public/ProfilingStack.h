@@ -160,7 +160,7 @@ class ProfileEntry
         MOZ_ASSERT(!isJs());
         return spOrScript;
     }
-    JSScript* script() const volatile {
+    JS_PUBLIC_API(JSScript*) script() const volatile {
         MOZ_ASSERT(isJs());
         return (JSScript*)spOrScript;
     }
