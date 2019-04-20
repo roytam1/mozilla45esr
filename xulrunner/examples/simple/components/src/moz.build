@@ -17,5 +17,10 @@ EXTRA_COMPONENTS += [
 
 XPI_NAME = 'simple'
 
+if CONFIG['JS_SHARED_LIBRARY']:
+    USE_LIBS += [
+        'js',
+]
+
 if CONFIG['GNU_CXX']:
     CXXFLAGS += ['-Wshadow']
