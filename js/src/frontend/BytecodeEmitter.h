@@ -659,6 +659,14 @@ struct BytecodeEmitter
     bool emitSuperElemOp(ParseNode* pn, JSOp op, bool isCall = false);
 };
 
+/* VC < 2015 doesn't support `constexpr` keyword */
+#if defined(_MSC_VER) && _MSC_VER < 1900
+#define constexpr 
+#endif
+
+static constexpr size_t MaxBytecodeLength = INT32_MAX;
+static constexpr size_t MaxSrcNotesLength = INT32_MAX;
+
 } /* namespace frontend */
 } /* namespace js */
 
