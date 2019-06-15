@@ -297,8 +297,9 @@ class SyntaxParseHandler
     bool addShorthand(Node literal, Node name, Node expr) { return true; }
     bool addObjectMethodDefinition(Node literal, Node name, Node fn, JSOp op) { return true; }
     bool addClassMethodDefinition(Node literal, Node name, Node fn, JSOp op, bool isStatic) { return true; }
-    Node newYieldExpression(uint32_t begin, Node value, Node gen) { return NodeGeneric; }
-    Node newYieldStarExpression(uint32_t begin, Node value, Node gen) { return NodeGeneric; }
+    Node newYieldExpression(uint32_t begin, Node value, Node gen, JSOp op) { return NodeGeneric; } // see issue 430
+    Node newYieldStarExpression(uint32_t begin, Node value, Node gen) { return NodeGeneric; } // see issue 430
+    Node newAwaitExpression(uint32_t begin, Node value, Node gen) { return NodeGeneric; } // see issue 430
 
     // Statements
 

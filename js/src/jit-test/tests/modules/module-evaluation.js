@@ -1,4 +1,5 @@
 // Exercise ModuleEvaluation() concrete method.
+// XXX: if fails, see https://hg.mozilla.org/integration/mozilla-inbound/raw-rev/2829205d2c81
 
 load(libdir + "asserts.js");
 load(libdir + "dummyModuleResolveHook.js");

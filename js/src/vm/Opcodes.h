@@ -2168,7 +2168,6 @@
      *   Stack: val => ToString(val)
      */ \
     macro(JSOP_TOSTRING,    228, "tostring",       NULL,  1,  1,  1,  JOF_BYTE)
-
 /*
  * In certain circumstances it may be useful to "pad out" the opcode space to
  * a power of two.  Use this macro to do so.

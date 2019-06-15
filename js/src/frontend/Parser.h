@@ -375,6 +375,7 @@ enum class PropertyType {
     SetterNoExpressionClosure,
     Method,
     GeneratorMethod,
+    AsyncMethod,
     Constructor,
     DerivedConstructor
 };
@@ -652,7 +653,7 @@ class Parser : private JS::AutoGCRooter, public StrictModeGetter
     bool checkStatementsEOF();
 
     inline Node newName(PropertyName* name);
-    inline Node newYieldExpression(uint32_t begin, Node expr, bool isYieldStar = false);
+    inline Node newYieldExpression(uint32_t begin, Node expr, bool isYieldStar = false, bool isAsync = false);
 
     inline bool abortIfSyntaxParser();
 
@@ -739,8 +740,10 @@ class Parser : private JS::AutoGCRooter, public StrictModeGetter
      * Some parsers have two versions:  an always-inlined version (with an 'i'
      * suffix) and a never-inlined version (with an 'n' suffix).
      */
-    Node functionStmt(YieldHandling yieldHandling, DefaultHandling defaultHandling);
-    Node functionExpr(InvokedPrediction invoked = PredictUninvoked);
+    Node functionStmt(YieldHandling yieldHandling,
+        DefaultHandling defaultHandling, FunctionAsyncKind asyncKind);
+    Node functionExpr(InvokedPrediction invoked = PredictUninvoked,
+        FunctionAsyncKind asyncKind = SyncFunction);
     Node statements(YieldHandling yieldHandling);
 
     Node blockStatement(YieldHandling yieldHandling);
@@ -844,7 +847,7 @@ class Parser : private JS::AutoGCRooter, public StrictModeGetter
     Node assignExpr(InHandling inHandling, YieldHandling yieldHandling,
                     TripledotHandling tripledotHandling,
                     InvokedPrediction invoked = PredictUninvoked);
-    Node assignExprWithoutYield(YieldHandling yieldHandling, unsigned err);
+    Node assignExprWithoutYieldAndAwait(YieldHandling yieldHandling, unsigned err);
     Node yieldExpression(InHandling inHandling);
     Node condExpr1(InHandling inHandling, YieldHandling yieldHandling,
                    TripledotHandling tripledotHandling,
@@ -881,7 +884,7 @@ class Parser : private JS::AutoGCRooter, public StrictModeGetter
      * Additional JS parsers.
      */
     bool functionArguments(YieldHandling yieldHandling, FunctionSyntaxKind kind,
-                           Node funcpn, bool* hasRest);
+                           FunctionAsyncKind asyncKind, Node funcpn, bool* hasRest);
 
     Node functionDef(InHandling inHandling, YieldHandling uieldHandling, HandlePropertyName name,
                      FunctionSyntaxKind kind, GeneratorKind generatorKind,
@@ -1020,6 +1023,7 @@ class Parser : private JS::AutoGCRooter, public StrictModeGetter
 
     // Top-level entrypoint into destructuring pattern checking/name-analyzing.
     bool checkDestructuringPattern(BindData<ParseHandler>* data, Node pattern);
+
 
     // Recursive methods for checking/name-analyzing subcomponents of a
     // destructuring pattern.  The array/object methods *must* be passed arrays
