@@ -962,6 +962,7 @@ CanvasRenderingContext2D::CanvasRenderingContext2D()
   , mIsCapturedFrameInvalid(false)
   , mPathTransformWillUpdate(false)
   , mInvalidateCount(0)
+  , mWriteOnly(false)
 {
   sNumLivingContexts++;
 
@@ -1988,7 +1989,11 @@ CanvasRenderingContext2D::SetStyleFromUnion(const StringOrCanvasGradientOrCanvas
   }
 
   if (value.IsCanvasPattern()) {
-    SetStyleFromPattern(value.GetAsCanvasPattern(), whichStyle);
+    CanvasPattern& pattern = value.GetAsCanvasPattern();
+    SetStyleFromPattern(pattern, whichStyle);
+    if (pattern.mForceWriteOnly) {
+      SetWriteOnly();
+    }
     return;
   }
 
@@ -2111,7 +2116,7 @@ CanvasRenderingContext2D::CreatePattern(const CanvasImageSource& source,
     // nullptr and set CORSUsed to true for passing the security check in
     // CanvasUtils::DoDrawImageSecurityCheck().
     RefPtr<CanvasPattern> pat =
-      new CanvasPattern(this, srcSurf, repeatMode, nullptr, false, true);
+      new CanvasPattern(this, srcSurf, repeatMode, nullptr, imgBitmap.IsWriteOnly(), true);
 
     return pat.forget();
   }
@@ -2124,12 +2129,13 @@ CanvasRenderingContext2D::CreatePattern(const CanvasImageSource& source,
     nsLayoutUtils::SurfaceFromElement(htmlElement,
       nsLayoutUtils::SFE_WANT_FIRST_FRAME, mTarget);
 
-  if (!res.GetSourceSurface()) {
+  RefPtr<SourceSurface> surface = res.GetSourceSurface();
+  if (!surface) {
     error.Throw(NS_ERROR_NOT_AVAILABLE);
     return nullptr;
   }
 
-  RefPtr<CanvasPattern> pat = new CanvasPattern(this, res.GetSourceSurface(), repeatMode,
+  RefPtr<CanvasPattern> pat = new CanvasPattern(this, surface, repeatMode,
                                                 res.mPrincipal, res.mIsWriteOnly,
                                                 res.mCORSUsed);
   return pat.forget();
@@ -4360,8 +4366,8 @@ CanvasRenderingContext2D::CachedSurfaceFromElement(Element* aElement)
 
   res.mSize = res.mSourceSurface->GetSize();
   res.mPrincipal = principal.forget();
-  res.mIsWriteOnly = false;
   res.mImageRequest = imgRequest.forget();
+  res.mIsWriteOnly = CheckWriteOnlySecurity(res.mCORSUsed, res.mPrincipal);
 
   return res;
 }
@@ -4436,12 +4442,20 @@ CanvasRenderingContext2D::DrawImage(const CanvasImageSource& image,
       error.Throw(NS_ERROR_DOM_INVALID_STATE_ERR);
       return;
     }
+
+    if (canvas->IsWriteOnly()) {
+      SetWriteOnly();
+    }
   } else if (image.IsImageBitmap()) {
     ImageBitmap& imageBitmap = image.GetAsImageBitmap();
     srcSurf = imageBitmap.PrepareForDrawTarget(mTarget);
 
     if (!srcSurf) {
       return;
+    }
+
+    if (imageBitmap.IsWriteOnly()) {
+      SetWriteOnly();
     }
 
     imgSize = gfx::IntSize(imageBitmap.Width(), imageBitmap.Height());
@@ -5136,9 +5150,8 @@ CanvasRenderingContext2D::GetImageData(JSContext* aCx, double aSx,
 
   // Check only if we have a canvas element; if we were created with a docshell,
   // then it's special internal use.
-  if (mCanvasElement && mCanvasElement->IsWriteOnly() &&
-      !nsContentUtils::IsCallerChrome())
-  {
+  if (IsWriteOnly() ||
+      (mCanvasElement && !mCanvasElement->CallerCanRead(aCx))) {
     // XXX ERRMSG we need to report an error to developers here! (bug 329026)
     error.Throw(NS_ERROR_DOM_SECURITY_ERR);
     return nullptr;
@@ -5741,6 +5754,13 @@ bool
 CanvasRenderingContext2D::ShouldForceInactiveLayer(LayerManager *aManager)
 {
   return !aManager->CanUseCanvasLayerForSize(IntSize(mWidth, mHeight));
+}
+
+void CanvasRenderingContext2D::SetWriteOnly() {
+  mWriteOnly = true;
+  if (mCanvasElement) {
+    mCanvasElement->SetWriteOnly();
+  }
 }
 
 NS_IMPL_CYCLE_COLLECTION_ROOT_NATIVE(CanvasPath, AddRef)
