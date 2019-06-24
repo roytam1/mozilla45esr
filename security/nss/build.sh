@@ -120,7 +120,7 @@ else
     target=Debug
 fi
 
-gyp_params+=(-Denable_sslkeylogfile="$sslkeylogfile")
+#gyp_params+=(-Denable_sslkeylogfile="$sslkeylogfile")
 
 # Do special setup.
 if [ "$fuzz" = 1 ]; then
