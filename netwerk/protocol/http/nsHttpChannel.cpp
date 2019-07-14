@@ -6005,7 +6005,8 @@ nsHttpChannel::OnStopRequest(nsIRequest *request, nsISupports *ctxt, nsresult st
             if (mListener) {
                 MOZ_ASSERT(!mOnStartRequestCalled,
                            "We should not call OnStartRequest twice.");
-                mListener->OnStartRequest(this, mListenerContext);
+                nsCOMPtr<nsIStreamListener> listener(mListener);
+                listener->OnStartRequest(this, mListenerContext);
                 mOnStartRequestCalled = true;
             } else {
                 NS_WARNING("OnStartRequest skipped because of null listener");
@@ -7066,7 +7067,7 @@ nsHttpChannel::AwaitingCacheCallbacks()
 }
 
 void
-nsHttpChannel::SetPushedStream(Http2PushedStream *stream)
+nsHttpChannel::SetPushedStream(Http2PushedStreamWrapper *stream)
 {
     MOZ_ASSERT(stream);
     MOZ_ASSERT(!mPushedStream);
@@ -7074,7 +7075,8 @@ nsHttpChannel::SetPushedStream(Http2PushedStream *stream)
 }
 
 nsresult
-nsHttpChannel::OnPush(const nsACString &url, Http2PushedStream *pushedStream)
+nsHttpChannel::OnPush(const nsACString &url,
+                      Http2PushedStreamWrapper *pushedStream)
 {
     MOZ_ASSERT(NS_IsMainThread());
     LOG(("nsHttpChannel::OnPush [this=%p]\n", this));
