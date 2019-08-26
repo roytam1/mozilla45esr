@@ -55,12 +55,6 @@
 #define IF_SAB(real,imaginary) imaginary
 #endif
 
-#ifdef NIGHTLY_BUILD
-#define IF_NIGHTLY(real,imaginary) real
-#else
-#define IF_NIGHTLY(real,imaginary) imaginary
-#endif
-
 #define JS_FOR_PROTOTYPES(real,imaginary) \
     imaginary(Null,              0,     InitNullClass,          dummy) \
     real(Object,                 1,     InitViaClassSpec,       OCLASP(Plain)) \

@@ -246,6 +246,7 @@ bool
 BytecodeEmitter::emit1(JSOp op)
 {
     MOZ_ASSERT(checkStrictOrSloppy(op));
+
     ptrdiff_t offset;
     if (!emitCheck(1, &offset))
         return false;
@@ -3597,6 +3598,20 @@ BytecodeEmitter::emitFunctionScript(ParseNode* body)
         switchToMain();
     }
 
+    if (funbox->isAsync()) {
+        // Currently short-circuit async functions with a throw.
+        // TenFourFox issue 521.
+        if (!emit1(JSOP_NULL))
+            return false;
+        if (!emit1(JSOP_THROW))
+            return false;
+        if (!emit1(JSOP_NULL))
+            return false;
+        if (!emit1(JSOP_RETURN))
+            return false;
+        goto asyncout;
+    }
+
     if (!emitTree(body))
         return false;
 
@@ -3647,6 +3662,7 @@ BytecodeEmitter::emitFunctionScript(ParseNode* body)
         if (!emit1(JSOP_CHECKRETURN))
             return false;
     }
+asyncout:
 
     // Always end the script with a JSOP_RETRVAL. Some other parts of the codebase
     // depend on this opcode, e.g. InterpreterRegs::setToEndOfScript.
@@ -6408,9 +6424,6 @@ BytecodeEmitter::emitFunction(ParseNode* pn, bool needsProto)
             pn->setOp(JSOP_FUNWITHPROTO);
         }
 
-        if (funbox->isAsync())
-            return emitAsyncWrapper(index, funbox->needsHomeObject());
-
         if (pn->getOp() == JSOP_DEFFUN) {
             if (!emitIndex32(JSOP_LAMBDA, index))
                 return false;
@@ -6457,13 +6470,8 @@ BytecodeEmitter::emitFunction(ParseNode* pn, bool needsProto)
         MOZ_ASSERT(pn->pn_scopecoord.isFree());
         MOZ_ASSERT(pn->getOp() == JSOP_NOP);
         switchToPrologue();
-        if (funbox->isAsync()) {
-            if (!emitAsyncWrapper(index, fun->isMethod()))
-                return false;
-        } else {
-            if (!emitIndex32(JSOP_LAMBDA, index))
-                return false;
-        }
+        if (!emitIndex32(JSOP_LAMBDA, index))
+            return false;
         if (!emit1(JSOP_DEFFUN))
             return false;
         if (!updateSourceCoordNotes(pn->pn_pos.begin))
@@ -6478,11 +6486,7 @@ BytecodeEmitter::emitFunction(ParseNode* pn, bool needsProto)
                    bi->kind() == Binding::ARGUMENT);
         MOZ_ASSERT(bi.argOrLocalIndex() < JS_BIT(20));
 #endif
-        if (funbox->isAsync()) {
-            if (!emitAsyncWrapper(index, false))
-                return false;
-        }
-        else if (!emitIndexOp(JSOP_LAMBDA, index))
+        if (!emitIndexOp(JSOP_LAMBDA, index))
             return false;
         MOZ_ASSERT(pn->getOp() == JSOP_GETLOCAL || pn->getOp() == JSOP_GETARG);
         JSOp setOp = pn->getOp() == JSOP_GETLOCAL ? JSOP_SETLOCAL : JSOP_SETARG;
@@ -6502,26 +6506,7 @@ BytecodeEmitter::emitFunction(ParseNode* pn, bool needsProto)
 
 bool
 BytecodeEmitter::emitAsyncWrapper(unsigned index, bool needsHomeObject) {
-    JSAtom* atom = Atomize(cx, "AsyncFunction_wrap", 18);
-    if (!atom)
-        return false;
-    /* TODO Comment */
-    if (needsHomeObject && !emitIndex32(JSOP_LAMBDA, index))
-        return false;
-    if (!emitAtomOp(atom, JSOP_GETINTRINSIC))
-        return false;
-    if (!emit1(JSOP_UNDEFINED))
-        return false;
-    if (needsHomeObject) {
-        if (!emitDupAt(2))
-            return false;
-    } else {
-        if (!emitIndex32(JSOP_LAMBDA, index))
-            return false;
-    }
-    if (!emitCall(JSOP_CALL, 1))
-        return false;
-    return true;
+    MOZ_CRASH("NYI");
 }
 
 bool
@@ -7818,12 +7803,7 @@ BytecodeEmitter::emitPropertyList(ParseNode* pn, MutableHandlePlainObject objp, 
             propdef->pn_right->pn_funbox->needsHomeObject())
         {
             MOZ_ASSERT(propdef->pn_right->pn_funbox->function()->allowSuperProperty());
-            bool isAsync = propdef->pn_right->pn_funbox->isAsync();
-            if (isAsync && !emit1(JSOP_SWAP))
-                return false;
-            if (!emit2(JSOP_INITHOMEOBJECT, isIndex + isAsync))
-                return false;
-            if (isAsync && !emit1(JSOP_POP))
+            if (!emit2(JSOP_INITHOMEOBJECT, isIndex))
                 return false;
         }
 

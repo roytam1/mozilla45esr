@@ -894,7 +894,6 @@ class ScriptSourceObject : public NativeObject
 };
 
 enum GeneratorKind { NotGenerator, LegacyGenerator, StarGenerator };
-
 enum FunctionAsyncKind { SyncFunction, AsyncFunction };
 
 static inline unsigned
@@ -2160,10 +2159,11 @@ class LazyScript : public gc::TenuredCell
         uint32_t version : 8;
 
         uint32_t numFreeVariables : 23;
+        uint32_t isAsync: 1;
         uint32_t numInnerFunctions : 20;
 
         uint32_t generatorKindBits : 2;
-        uint32_t isAsync: 1;
+
         // N.B. These are booleans but need to be uint32_t to pack correctly on MSVC.
         // If you add another boolean here, make sure to initialze it in
         // LazyScript::CreateRaw().

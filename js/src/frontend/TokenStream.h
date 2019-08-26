@@ -697,14 +697,6 @@ class MOZ_STACK_CLASS TokenStream
         return true;
     }
 
-    bool getAwaitIsKeyword() {
-        return awaitIsKeyword;
-    }
-
-    void setAwaitIsKeyword(bool _awaitIsKeyword) {
-        awaitIsKeyword = _awaitIsKeyword;
-    }
-
     class MOZ_STACK_CLASS Position {
       public:
         // The Token fields may contain pointers to atoms, so for correct

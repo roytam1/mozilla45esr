@@ -959,9 +959,7 @@ Parser<ParseHandler>::checkStrictBinding(PropertyName* name, Node pn)
         return true;
 
     if (name == context->names().eval || name == context->names().arguments ||
-        (IsKeyword(name) && name != context->names().await))
-    {
-fprintf(stderr, "await line %d\n", __LINE__);
+        (IsKeyword(name) && name != context->names().await)) {
         JSAutoByteString bytes;
         if (!AtomToPrintableString(context, name, &bytes))
             return false;
@@ -972,6 +970,7 @@ fprintf(stderr, "await line %d\n", __LINE__);
     return true;
 }
 
+/* ::moduleBody */
 template <typename ParseHandler>
 typename ParseHandler::Node
 Parser<ParseHandler>::standaloneModule(HandleModuleObject module)
@@ -982,6 +981,7 @@ Parser<ParseHandler>::standaloneModule(HandleModuleObject module)
     if (!mn)
         return null();
 
+    AutoAwaitIsKeyword awaitIsKeyword(&tokenStream, true);
     ModuleBox* modulebox = newModuleBox(mn, module);
     if (!modulebox)
         return null();
@@ -991,10 +991,7 @@ Parser<ParseHandler>::standaloneModule(HandleModuleObject module)
     if (!modulepc.init(*this))
         return null();
 
-    bool awaitIsKeyword = tokenStream.getAwaitIsKeyword();
-    tokenStream.setAwaitIsKeyword(true);
     ParseNode* pn = statements(YieldIsKeyword);
-    tokenStream.setAwaitIsKeyword(awaitIsKeyword);
     if (!pn)
         return null();
 
@@ -1145,6 +1142,16 @@ Parser<SyntaxParseHandler>::defineFunctionThis()
     return true;
 }
 
+static YieldHandling
+GetYieldHandling(GeneratorKind generatorKind, FunctionAsyncKind asyncKind)
+{
+    if (asyncKind == AsyncFunction)
+        return YieldIsName;
+    if (generatorKind == NotGenerator)
+        return YieldIsName;
+    return YieldIsKeyword;
+}
+
 template <>
 ParseNode*
 Parser<FullParseHandler>::standaloneFunctionBody(HandleFunction fun,
@@ -1182,8 +1189,7 @@ Parser<FullParseHandler>::standaloneFunctionBody(HandleFunction fun,
             return null();
     }
 
-fprintf(stderr, "standaloneFB\n");
-    YieldHandling yieldHandling = generatorKind != NotGenerator ? YieldIsKeyword : YieldIsName;
+    YieldHandling yieldHandling = GetYieldHandling(generatorKind, asyncKind);
     ParseNode* pn = functionBody(InAllowed, yieldHandling, Statement, StatementListBody);
     if (!pn)
         return null();
@@ -1335,20 +1341,18 @@ Parser<ParseHandler>::functionBody(InHandling inHandling, YieldHandling yieldHan
 {
     MOZ_ASSERT(pc->sc->isFunctionBox());
     MOZ_ASSERT(!pc->funHasReturnExpr && !pc->funHasReturnVoid);
-fprintf(stderr, "reached function body\n");
+
 #ifdef DEBUG
     uint32_t startYieldOffset = pc->lastYieldOffset;
 #endif
 
     Node pn;
     if (type == StatementListBody) {
-fprintf(stderr, "fb1\n");
         pn = statements(yieldHandling);
         if (!pn)
             return null();
     } else {
         MOZ_ASSERT(type == ExpressionBody);
-fprintf(stderr, "fb2\n");
 
         // Async functions are implemented as star generators, and star
         // generators are assumed to be statement lists, to prepend initial
@@ -1401,7 +1405,6 @@ fprintf(stderr, "fb2\n");
         break;
     }
 
-fprintf(stderr, "fb3\n");
     if (pc->isGenerator()) {
         MOZ_ASSERT_IF(!pc->isAsync(), type == StatementListBody);
         Node generator = newName(context->names().dotGenerator);
@@ -1419,7 +1422,6 @@ fprintf(stderr, "fb3\n");
             return null();
     }
 
-fprintf(stderr, "fb4\n");
     if (kind != Arrow) {
         // Define the 'arguments' and 'this' bindings if necessary. Arrow
         // functions don't have these bindings.
@@ -1693,10 +1695,6 @@ Parser<ParseHandler>::newFunction(HandleAtom atom, FunctionSyntaxKind kind,
                  ? JSFunction::INTERPRETED_NORMAL
                  : JSFunction::INTERPRETED_GENERATOR);
     }
-
-    // We store the async wrapper in a slot for later access.
-    if (asyncKind == AsyncFunction)
-        allocKind = gc::AllocKind::FUNCTION_EXTENDED;
 
     fun = NewFunctionWithProto(context, nullptr, 0, flags, nullptr, atom, proto,
                                allocKind, TenuredObject);
@@ -2083,7 +2081,7 @@ Parser<ParseHandler>::bindDestructuringArg(BindData<ParseHandler>* data,
 template <typename ParseHandler>
 bool
 Parser<ParseHandler>::functionArguments(YieldHandling yieldHandling, FunctionSyntaxKind kind,
-                                        FunctionAsyncKind asyncKind, Node funcpn, bool* hasRest)
+                                        Node funcpn, bool* hasRest)
 {
     FunctionBox* funbox = pc->sc->asFunctionBox();
 
@@ -2123,7 +2121,7 @@ Parser<ParseHandler>::functionArguments(YieldHandling yieldHandling, FunctionSyn
         firstTokenModifier = funbox->isAsync() ? TokenStream::None : TokenStream::Operand;
         if (!tokenStream.peekToken(&tt, firstTokenModifier))
             return false;
-        if (tt == TOK_NAME || tt == TOK_YIELD) {
+        if (tt == TOK_NAME || tt == TOK_YIELD) { // from bug 1305566 -r 347016
             parenFreeArrow = true;
             argModifier = firstTokenModifier;
         }
@@ -2178,6 +2176,7 @@ Parser<ParseHandler>::functionArguments(YieldHandling yieldHandling, FunctionSyn
             if (!tokenStream.getToken(&tt, argModifier))
                 return false;
             argModifier = TokenStream::Operand;
+            // from bug 1305566 -r 347016
             MOZ_ASSERT_IF(parenFreeArrow, tt == TOK_NAME || tt == TOK_YIELD);
             switch (tt) {
               case TOK_LB:
@@ -2200,8 +2199,7 @@ Parser<ParseHandler>::functionArguments(YieldHandling yieldHandling, FunctionSyn
                  */
                 BindData<ParseHandler> data(context);
                 data.initDestructuring(JSOP_DEFVAR);
-                Node destruct = destructuringExprWithoutYield(yieldHandling, &data, tt,
-                                                              JSMSG_YIELD_IN_DEFAULT);
+                Node destruct = destructuringExprWithoutYieldOrAwait(yieldHandling, &data, tt);
                 if (!destruct)
                     return false;
 
@@ -2223,19 +2221,13 @@ Parser<ParseHandler>::functionArguments(YieldHandling yieldHandling, FunctionSyn
               }
 
               case TOK_YIELD:
-#if(0)
-// TenFourFox issue 521
-// This appears to work, but I'm concerned the semantics are wrong.
-// Let it fail for now.
-                // async yield => X is valid if non-strict. Stupid, but valid.
-                // XXX: Does this apply to any arrow function?
-                if (funbox->isAsync() && parenFreeArrow && !pc->sc->strict())
-                    goto TOK_NAME;
-#endif
-
+                // If |yield| is a keyword, this is a syntax error.
+                if (yieldHandling != YieldIsName) {
+                    report(ParseError, false, null(), JSMSG_RESERVED_ID, "yield");
+                    return false;
+                }
                 if (!checkYieldNameValidity())
                     return false;
-                MOZ_ASSERT(yieldHandling == YieldIsName);
                 goto TOK_NAME;
 
               case TOK_TRIPLEDOT:
@@ -2267,14 +2259,13 @@ Parser<ParseHandler>::functionArguments(YieldHandling yieldHandling, FunctionSyn
                 goto TOK_NAME;
               }
 
-              TOK_NAME:
-              case TOK_NAME: /* and TOK_YIELD, see above */
+              TOK_NAME: /* from TOK_YIELD above */
+              case TOK_NAME:
               {
                 if (parenFreeArrow)
                     funbox->setStart(tokenStream);
 
                 if (funbox->isAsync() && tokenStream.currentName() == context->names().await) {
-fprintf(stderr, "await line %d\n", __LINE__);
                     // `await` is already gotten as TOK_NAME for the following
                     // case:
                     //
@@ -2320,20 +2311,11 @@ fprintf(stderr, "await line %d\n", __LINE__);
                     // before the first default argument.
                     funbox->length = pc->numArgs() - 1;
                 }
-                bool awaitIsKeyword;
-                if (asyncKind == AsyncFunction) {
-                    awaitIsKeyword = tokenStream.getAwaitIsKeyword();
-                    tokenStream.setAwaitIsKeyword(true);
-                }
-                Node def_expr = assignExprWithoutYieldAndAwait(yieldHandling, JSMSG_YIELD_IN_DEFAULT);
-
+                Node def_expr = assignExprWithoutYieldOrAwait(yieldHandling);
                 if (!def_expr)
                     return false;
                 if (!handler.setLastFunctionArgumentDefault(funcpn, def_expr))
                     return false;
-                if (asyncKind == AsyncFunction) {
-                    tokenStream.setAwaitIsKeyword(awaitIsKeyword);
-                }
             }
 
             if (parenFreeArrow || IsSetterKind(kind))
@@ -2979,7 +2961,7 @@ Parser<FullParseHandler>::functionArgsAndBody(InHandling inHandling, ParseNode* 
     if (kind == DerivedClassConstructor)
         funbox->setDerivedClassConstructor();
 
-    YieldHandling yieldHandling = generatorKind != NotGenerator ? YieldIsKeyword : YieldIsName;
+    YieldHandling yieldHandling = GetYieldHandling(generatorKind, asyncKind);
 
     // We need to roll back the block scope vector if syntax parsing fails.
     uint32_t oldBlockScopesLength = blockScopes.length();
@@ -3082,7 +3064,7 @@ Parser<SyntaxParseHandler>::functionArgsAndBody(InHandling inHandling, Node pn, 
     if (!funpc.init(*this))
         return false;
 
-    YieldHandling yieldHandling = generatorKind != NotGenerator ? YieldIsKeyword : YieldIsName;
+    YieldHandling yieldHandling = GetYieldHandling(generatorKind, asyncKind);
     if (!functionArgsAndBodyGeneric(inHandling, yieldHandling, pn, fun, kind))
         return false;
 
@@ -3127,8 +3109,13 @@ Parser<FullParseHandler>::standaloneLazyFunction(HandleFunction fun, bool strict
         return null();
 
     // Our tokenStream has no current token, so pn's position is garbage.
-    // Substitute the position of the first token in our source.
-    if (!tokenStream.peekTokenPos(&pn->pn_pos))
+    // Substitute the position of the first token in our source. If the function
+    // is a not-async arrow, use TokenStream::Operand to keep
+    // verifyConsistentModifier from complaining (we will use
+    // TokenStream::Operand in functionArguments).
+    TokenStream::Modifier modifier = (fun->isArrow() && asyncKind == SyncFunction)
+                                     ? TokenStream::Operand : TokenStream::None;
+    if (!tokenStream.peekTokenPos(&pn->pn_pos, modifier))
         return null();
 
     RootedObject enclosing(context, fun->lazyScript()->enclosingScope());
@@ -3147,7 +3134,7 @@ Parser<FullParseHandler>::standaloneLazyFunction(HandleFunction fun, bool strict
     if (!funpc.init(*this))
         return null();
 
-    YieldHandling yieldHandling = generatorKind != NotGenerator ? YieldIsKeyword : YieldIsName;
+    YieldHandling yieldHandling = GetYieldHandling(generatorKind, asyncKind);
     FunctionSyntaxKind syntaxKind = Statement;
     if (fun->isClassConstructor())
         syntaxKind = ClassConstructor;
@@ -3192,9 +3179,10 @@ Parser<ParseHandler>::functionArgsAndBodyGeneric(InHandling inHandling,
     // parsing and such.
 
     FunctionBox* funbox = pc->sc->asFunctionBox();
+    AutoAwaitIsKeyword awaitIsKeyword(&tokenStream, funbox->isAsync());
 
     bool hasRest;
-    if (!functionArguments(yieldHandling, kind, funbox->asyncKind(), pn, &hasRest))
+    if (!functionArguments(yieldHandling, kind, pn, &hasRest))
         return false;
 
     fun->setArgCount(pc->numArgs());
@@ -3226,7 +3214,7 @@ Parser<ParseHandler>::functionArgsAndBodyGeneric(InHandling inHandling,
 
         if (kind != Arrow) {
 #if JS_HAS_EXPR_CLOSURES
-            addTelemetry(JSCompartment::DeprecatedExpressionClosure);
+            //addTelemetry(JSCompartment::DeprecatedExpressionClosure);
             if (!warnOnceAboutExprClosure())
                 return false;
 #else
@@ -3242,13 +3230,9 @@ Parser<ParseHandler>::functionArgsAndBodyGeneric(InHandling inHandling,
 #endif
     }
 
-    bool beforeAwaitIsKeyword = tokenStream.getAwaitIsKeyword();
-    tokenStream.setAwaitIsKeyword(funbox->isAsync());
-fprintf(stderr, "awaitiskeyword: before/%i now/%i\n", (int)beforeAwaitIsKeyword, (int)funbox->isAsync());
     Node body = functionBody(inHandling, yieldHandling, kind, bodyType);
     if (!body)
         return false;
-    tokenStream.setAwaitIsKeyword(beforeAwaitIsKeyword);
 
     if ((kind != Method && !IsConstructorKind(kind)) && fun->name() &&
         !checkStrictBinding(fun->name(), pn))
@@ -3257,7 +3241,6 @@ fprintf(stderr, "awaitiskeyword: before/%i now/%i\n", (int)beforeAwaitIsKeyword,
     }
 
     if (bodyType == StatementListBody) {
-fprintf(stderr, "eh? hit 1\n");
         bool matched;
         if (!tokenStream.matchToken(&matched, TOK_RC, TokenStream::Operand))
             return false;
@@ -3273,12 +3256,10 @@ fprintf(stderr, "eh? hit 1\n");
         if (tokenStream.hadError())
             return false;
         funbox->bufEnd = pos().end;
-fprintf(stderr, "hit 2\n");
         if (kind == Statement && !MatchOrInsertSemicolonAfterExpression(tokenStream))
             return false;
     }
 
-fprintf(stderr, "hit 3\n");
     return finishFunctionDefinition(pn, funbox, body);
 }
 
@@ -3286,9 +3267,11 @@ template <typename ParseHandler>
 bool
 Parser<ParseHandler>::checkYieldNameValidity()
 {
-    // In star generators and in JS >= 1.7, yield is a keyword.  Otherwise in
-    // strict mode, yield is a future reserved word.
-    if (pc->isStarGenerator() || versionNumber() >= JSVERSION_1_7 || pc->sc->strict()) {
+    // We might use this when |yield| isn't a name, so don't assert here.
+    // In JS >= 1.7, yield is a keyword.  Otherwise in
+    // strict mode, yield is a future reserved word. See bug 1305566
+    // and TenFourFox issue 521.
+    if (versionNumber() >= JSVERSION_1_7 || pc->sc->strict()) {
         report(ParseError, false, null(), JSMSG_RESERVED_ID, "yield");
         return false;
     }
@@ -3321,7 +3304,7 @@ Parser<ParseHandler>::functionStmt(YieldHandling yieldHandling, DefaultHandling 
     }
 
     RootedPropertyName name(context);
-    GeneratorKind generatorKind = NotGenerator;
+    GeneratorKind generatorKind = asyncKind == AsyncFunction ? StarGenerator : NotGenerator;
     TokenKind tt;
     if (!tokenStream.getToken(&tt))
         return null();
@@ -3339,6 +3322,11 @@ Parser<ParseHandler>::functionStmt(YieldHandling yieldHandling, DefaultHandling 
     if (tt == TOK_NAME) {
         name = tokenStream.currentName();
     } else if (tt == TOK_YIELD) {
+        // |yield| must be a name, or this is a syntax error.
+        if (yieldHandling == YieldIsKeyword) {
+            report(ParseError, false, null(), JSMSG_RESERVED_ID, "yield");
+            return null();
+        }
         if (!checkYieldNameValidity())
             return null();
         name = tokenStream.currentName();
@@ -3352,9 +3340,8 @@ Parser<ParseHandler>::functionStmt(YieldHandling yieldHandling, DefaultHandling 
     }
 
     Node assignmentForAnnexB;
-    if (asyncKind == AsyncFunction)
-        generatorKind = StarGenerator;
-    Node fun = functionDef(InAllowed, yieldHandling, name, Statement, generatorKind,
+    YieldHandling newYieldHandling = GetYieldHandling(generatorKind, asyncKind);
+    Node fun = functionDef(InAllowed, newYieldHandling, name, Statement, generatorKind,
                            asyncKind, PredictUninvoked, &assignmentForAnnexB);
     if (!fun)
         return null();
@@ -3390,7 +3377,8 @@ Parser<ParseHandler>::functionExpr(InvokedPrediction invoked, FunctionAsyncKind 
 {
     MOZ_ASSERT(tokenStream.isCurrentTokenType(TOK_FUNCTION));
 
-    GeneratorKind generatorKind = NotGenerator;
+    AutoAwaitIsKeyword awaitIsKeyword(&tokenStream, asyncKind == AsyncFunction);
+    GeneratorKind generatorKind = asyncKind == AsyncFunction ? StarGenerator : NotGenerator;
     TokenKind tt;
     if (!tokenStream.getToken(&tt))
         return null();
@@ -3405,10 +3393,16 @@ Parser<ParseHandler>::functionExpr(InvokedPrediction invoked, FunctionAsyncKind 
             return null();
     }
 
+    YieldHandling yieldHandling = GetYieldHandling(generatorKind, asyncKind);
+
     RootedPropertyName name(context);
     if (tt == TOK_NAME) {
         name = tokenStream.currentName();
     } else if (tt == TOK_YIELD) {
+        if (yieldHandling == YieldIsKeyword) {
+            report(ParseError, false, null(), JSMSG_RESERVED_ID, "yield");
+            return null();
+        }
         if (!checkYieldNameValidity())
             return null();
         name = tokenStream.currentName();
@@ -3416,9 +3410,6 @@ Parser<ParseHandler>::functionExpr(InvokedPrediction invoked, FunctionAsyncKind 
         tokenStream.ungetToken();
     }
 
-    if (asyncKind == AsyncFunction)
-        generatorKind = StarGenerator;
-    YieldHandling yieldHandling = generatorKind != NotGenerator ? YieldIsKeyword : YieldIsName;
     return functionDef(InAllowed, yieldHandling, name, Expression, generatorKind, asyncKind, invoked);
 }
 
@@ -3686,6 +3677,7 @@ Parser<ParseHandler>::matchLabel(YieldHandling yieldHandling, MutableHandle<Prop
         // Fix bug 1104014, then stop shipping legacy generators in chrome
         // code, then remove this check!
         tokenStream.consumeKnownToken(TOK_YIELD, TokenStream::Operand);
+        MOZ_ASSERT(yieldHandling == YieldIsName);
         if (!checkYieldNameValidity())
             return false;
         label.set(tokenStream.currentName());
@@ -4506,16 +4498,21 @@ Parser<ParseHandler>::destructuringExpr(YieldHandling yieldHandling, BindData<Pa
 
 template <typename ParseHandler>
 typename ParseHandler::Node
-Parser<ParseHandler>::destructuringExprWithoutYield(YieldHandling yieldHandling,
-                                                    BindData<ParseHandler>* data, TokenKind tt,
-                                                    unsigned msg)
+Parser<ParseHandler>::destructuringExprWithoutYieldOrAwait(YieldHandling yieldHandling,
+                                                           BindData<ParseHandler>* data, TokenKind tt)
 {
     uint32_t startYieldOffset = pc->lastYieldOffset;
+    uint32_t startAwaitOffset = pc->lastAwaitOffset;
     Node res = destructuringExpr(yieldHandling, data, tt);
-    if (res && pc->lastYieldOffset != startYieldOffset) {
-        reportWithOffset(ParseError, false, pc->lastYieldOffset,
-                         msg, js_yield_str);
-        return null();
+    if (res) {
+        if (pc->lastYieldOffset != startYieldOffset) {
+            reportWithOffset(ParseError, false, pc->lastYieldOffset, JSMSG_YIELD_IN_DEFAULT);
+            return null();
+        }
+        if (pc->lastAwaitOffset != startAwaitOffset) {
+            reportWithOffset(ParseError, false, pc->lastAwaitOffset, JSMSG_AWAIT_IN_DEFAULT);
+            return null();
+        }
     }
     return res;
 }
@@ -4855,6 +4852,7 @@ Parser<ParseHandler>::declarationName(Node decl, TokenKind tt, BindData<ParseHan
         }
 
         // TOK_YIELD is only okay if it's treated as a name.
+        MOZ_ASSERT(yieldHandling == YieldIsName);
         if (!checkYieldNameValidity())
             return null();
     }
@@ -5626,7 +5624,7 @@ Parser<FullParseHandler>::exportDeclaration()
       }
 
       case TOK_FUNCTION:
-        kid = functionStmt(YieldIsKeyword, NameRequired, SyncFunction);
+        kid = functionStmt(YieldIsKeyword, NameRequired);
         if (!kid)
             return null();
 
@@ -5673,7 +5671,7 @@ Parser<FullParseHandler>::exportDeclaration()
         ParseNode* binding = nullptr;
         switch (tt) {
           case TOK_FUNCTION:
-            kid = functionStmt(YieldIsKeyword, AllowDefaultName, SyncFunction);
+            kid = functionStmt(YieldIsKeyword, AllowDefaultName);
             if (!kid)
                 return null();
             break;
@@ -5682,7 +5680,24 @@ Parser<FullParseHandler>::exportDeclaration()
             if (!kid)
                 return null();
             break;
-          default:
+          default: {
+            if (tt == TOK_NAME && tokenStream.currentName() == context->names().async) {
+                TokenKind nextSameLine = TOK_EOF;
+                if (!tokenStream.peekTokenSameLine(&nextSameLine))
+                    return null();
+
+                if (nextSameLine == TOK_FUNCTION) {
+                    if (!warnOnceAboutAsyncFuncs())
+                        return null();
+
+                    tokenStream.consumeKnownToken(nextSameLine);
+                    kid = functionStmt(YieldIsName, AllowDefaultName, AsyncFunction);
+                    if (!kid)
+                        return null();
+                    break;
+                }
+            }
+
             tokenStream.ungetToken();
             RootedPropertyName name(context, context->names().starDefaultStar);
             binding = makeInitializedLexicalBinding(name, PrepareConst, pos());
@@ -5694,6 +5709,7 @@ Parser<FullParseHandler>::exportDeclaration()
             if (!MatchOrInsertSemicolonAfterExpression(tokenStream))
                 return null();
             break;
+          }
         }
 
         return handler.newExportDefaultDeclaration(kid, binding, TokenPos(begin, pos().end));
@@ -6513,7 +6529,7 @@ Parser<ParseHandler>::returnStatement(YieldHandling yieldHandling)
 template <typename ParseHandler>
 typename ParseHandler::Node
 Parser<ParseHandler>::newYieldExpression(uint32_t begin, typename ParseHandler::Node expr,
-                                         bool isYieldStar, bool isAwait)
+                                         bool isYieldStar)
 {
     Node generator = newName(context->names().dotGenerator);
     if (!generator)
@@ -6522,9 +6538,19 @@ Parser<ParseHandler>::newYieldExpression(uint32_t begin, typename ParseHandler::
         return null();
     if (isYieldStar)
         return handler.newYieldStarExpression(begin, expr, generator);
-    if (isAwait)
-        return handler.newAwaitExpression(begin, expr, generator);
-    return handler.newYieldExpression(begin, expr, generator, JSOP_YIELD);
+    return handler.newYieldExpression(begin, expr, generator);
+}
+
+template <typename ParseHandler>
+typename ParseHandler::Node
+Parser<ParseHandler>::newAwaitExpression(uint32_t begin, typename ParseHandler::Node expr)
+{
+    Node generator = newName(context->names().dotGenerator);
+    if (!generator)
+        return null();
+    if (!noteNameUse(context->names().dotGenerator, generator))
+        return null();
+    return handler.newAwaitExpression(begin, expr, generator);
 }
 
 template <typename ParseHandler>
@@ -6561,6 +6587,7 @@ Parser<ParseHandler>::yieldExpression(InHandling inHandling)
           case TOK_RP:
           case TOK_COLON:
           case TOK_COMMA:
+          case TOK_IN:
             // No value.
             exprNode = null();
             tokenStream.addModifierException(TokenStream::NoneIsOperand);
@@ -6868,6 +6895,7 @@ Parser<ParseHandler>::tryStatement(YieldHandling yieldHandling)
 
                 // Even if yield is *not* necessarily a keyword, we still must
                 // check its validity for legacy generators.
+                MOZ_ASSERT(yieldHandling == YieldIsName);
                 if (!checkYieldNameValidity())
                     return null();
                 // Fall through.
@@ -7013,15 +7041,19 @@ FunctionSyntaxKindFromPropertyType(PropertyType propType)
 static GeneratorKind
 GeneratorKindFromPropertyType(PropertyType propType)
 {
-    return (propType == PropertyType::GeneratorMethod ||
-            propType == PropertyType::AsyncMethod)
-            ? StarGenerator : NotGenerator;
+    if (propType == PropertyType::GeneratorMethod)
+        return StarGenerator;
+    if (propType == PropertyType::AsyncMethod)
+        return StarGenerator;
+    return NotGenerator;
 }
 
 static FunctionAsyncKind
 AsyncKindFromPropertyType(PropertyType propType)
 {
-    return propType == PropertyType::AsyncMethod ? AsyncFunction : SyncFunction;
+    if (propType == PropertyType::AsyncMethod)
+        return AsyncFunction;
+    return SyncFunction;
 }
 
 template <>
@@ -7042,9 +7074,12 @@ Parser<FullParseHandler>::classDefinition(YieldHandling yieldHandling,
     if (tt == TOK_NAME) {
         name = tokenStream.currentName();
     } else if (tt == TOK_YIELD) {
+        if (yieldHandling == YieldIsKeyword) {
+            report(ParseError, false, null(), JSMSG_RESERVED_ID, "yield");
+            return null();
+        }
         if (!checkYieldNameValidity())
             return null();
-        MOZ_ASSERT(yieldHandling != YieldIsKeyword);
         name = tokenStream.currentName();
     } else if (classContext == ClassStatement) {
         if (defaultHandling == AllowDefaultName) {
@@ -7296,6 +7331,7 @@ Parser<ParseHandler>::peekShouldParseLetDeclaration(bool* parseDeclOut,
     return true;
 }
 
+/* ::statementListItem */
 template <typename ParseHandler>
 typename ParseHandler::Node
 Parser<ParseHandler>::statement(YieldHandling yieldHandling, bool canHaveDirectives)
@@ -7353,6 +7389,10 @@ Parser<ParseHandler>::statement(YieldHandling yieldHandling, bool canHaveDirecti
         if (!tokenStream.peekToken(&next, modifier))
             return null();
         if (next == TOK_COLON) {
+            if (yieldHandling == YieldIsKeyword) {
+                report(ParseError, false, null(), JSMSG_RESERVED_ID, "yield");
+                return null();
+            }
             if (!checkYieldNameValidity())
                 return null();
             return labeledStatement(yieldHandling);
@@ -7379,18 +7419,20 @@ Parser<ParseHandler>::statement(YieldHandling yieldHandling, bool canHaveDirecti
                 return lexicalDeclaration(yieldHandling, /* isConst = */ false);
         }
 
-        TokenKind next;
         if (tokenStream.currentName() == context->names().async) {
-fprintf(stderr, "line %d\n", __LINE__);
             TokenKind nextSameLine = TOK_EOF;
             if (!tokenStream.peekTokenSameLine(&nextSameLine))
                 return null();
             if (nextSameLine == TOK_FUNCTION) {
+                if (!warnOnceAboutAsyncFuncs())
+                    return null();
+
                 tokenStream.consumeKnownToken(TOK_FUNCTION);
                 return functionStmt(yieldHandling, NameRequired, AsyncFunction);
             }
         }
 
+        TokenKind next;
         if (!tokenStream.peekToken(&next))
             return null();
         if (next == TOK_COLON)
@@ -7465,7 +7507,7 @@ fprintf(stderr, "line %d\n", __LINE__);
 
       // HoistableDeclaration[?Yield]
       case TOK_FUNCTION:
-        return functionStmt(yieldHandling, NameRequired, SyncFunction);
+        return functionStmt(yieldHandling, NameRequired);
 
       // ClassDeclaration[?Yield]
       case TOK_CLASS:
@@ -7827,30 +7869,6 @@ Parser<ParseHandler>::assignExpr(InHandling inHandling, YieldHandling yieldHandl
     bool endsExpr;
 
     if (tt == TOK_NAME) {
-        if (tokenStream.currentName() == context->names().await) {
-            /* Support things like async a => await async function() ... 
-               by treating it like TOK_AWAIT. */
-fprintf(stderr, "await in assignExpr\n");
-            if (tokenStream.getAwaitIsKeyword()) {
-fprintf(stderr, "it's time to do it\n");
-                Node exprNode = unaryExpr(yieldHandling, tripledotHandling, possibleError);
-                if (!exprNode)
-                    return null();
-                return newYieldExpression(pos().begin, exprNode, false /* isYieldStar */, true /* isAwait */);
-            }
-        }
-        if (tokenStream.currentName() == context->names().async) {
-fprintf(stderr, "line %d\n", __LINE__);
-            TokenKind nextSameLine = TOK_EOF;
-            if (!tokenStream.peekTokenSameLine(&nextSameLine))
-                return null();
-
-            if (nextSameLine == TOK_FUNCTION) {
-                tokenStream.consumeKnownToken(TOK_FUNCTION);
-                return functionExpr(PredictUninvoked, AsyncFunction);
-            }
-        }
-
         if (!tokenStream.nextTokenEndsExpr(&endsExpr))
             return null();
         if (endsExpr)
@@ -7871,13 +7889,11 @@ fprintf(stderr, "line %d\n", __LINE__);
             return stringLiteral();
     }
 
-    if (tt == TOK_YIELD && yieldExpressionsSupported()) {
+    if (tt == TOK_YIELD && yieldExpressionsSupported())
         return yieldExpression(inHandling);
-    }
 
     bool maybeAsyncArrow = false;
     if (tt == TOK_NAME && tokenStream.currentName() == context->names().async) {
-fprintf(stderr, "line %d\n", __LINE__);
         TokenKind nextSameLine = TOK_EOF;
         if (!tokenStream.peekTokenSameLine(&nextSameLine))
             return null();
@@ -7897,7 +7913,6 @@ fprintf(stderr, "line %d\n", __LINE__);
     Node lhs;
     if (maybeAsyncArrow) {
         tokenStream.consumeKnownToken(TOK_NAME, TokenStream::Operand);
-fprintf(stderr, "line %d\n", __LINE__);
         MOZ_ASSERT(tokenStream.currentName() == context->names().async);
 
         TokenKind tt;
@@ -7905,11 +7920,13 @@ fprintf(stderr, "line %d\n", __LINE__);
             return null();
         MOZ_ASSERT(tt == TOK_NAME || tt == TOK_YIELD);
 
-        // Check yield validity here.
-/*        RootedPropertyName name(context, bindingIdentifier(yieldHandling));
-        if (!name) */
-        if (!identifierName(yieldHandling))
-            return null();
+        // Allow constructs like (async event => {}). In this case only
+        // check for yield validity if the token actually is |yield|.
+        if (tt == TOK_YIELD) {
+            MOZ_ASSERT(yieldHandling == YieldIsName);
+            if (!checkYieldNameValidity())
+                return null();
+        }
 
         if (!tokenStream.getToken(&tt))
             return null();
@@ -7919,6 +7936,8 @@ fprintf(stderr, "line %d\n", __LINE__);
 
             return null();
         }
+        if (!warnOnceAboutAsyncFuncs())
+            return null();
     } else {
         lhs = condExpr1(inHandling, yieldHandling, tripledotHandling, &possibleErrorInner, invoked);
         if (!lhs) {
@@ -7975,9 +7994,10 @@ fprintf(stderr, "line %d\n", __LINE__);
             tokenStream.consumeKnownToken(next, TokenStream::Operand);
 
             if (tokenStream.currentName() == context->names().async) {
-fprintf(stderr, "line %d\n", __LINE__);
                 TokenKind nextSameLine = TOK_EOF;
                 if (!tokenStream.peekTokenSameLine(&nextSameLine))
+                    return null();
+                if (!warnOnceAboutAsyncFuncs())
                     return null();
 
                 if (nextSameLine == TOK_ARROW) {
@@ -7991,7 +8011,8 @@ fprintf(stderr, "line %d\n", __LINE__);
             }
         }
 
-        Node arrowFunc = functionDef(inHandling, yieldHandling, nullptr, Arrow, generatorKind, asyncKind);
+        Node arrowFunc = functionDef(inHandling, yieldHandling, nullptr,
+                                     Arrow, generatorKind, asyncKind);
         if (!arrowFunc)
             return null();
 
@@ -8272,19 +8293,19 @@ Parser<ParseHandler>::unaryExpr(YieldHandling yieldHandling, TripledotHandling t
         return handler.newDelete(begin, expr);
       }
 
-      case TOK_AWAIT:
-      {
-          if (!pc->isAsync()) {
-              // TOK_AWAIT can be returned in module, even if it's not inside
-              // async function.
-              report(ParseError, false, null(), JSMSG_RESERVED_ID, "await");
-              return null();
-          }
-
-          Node kid = unaryExpr(yieldHandling, TripledotProhibited, possibleError);
-          if (!kid)
-              return null();
-          return newYieldExpression(begin, kid, /* isYieldStar = */ false, /* isAwait = */ true);
+      case TOK_AWAIT: {
+        TokenKind nextSameLine = TOK_EOF;
+        if (!tokenStream.peekTokenSameLine(&nextSameLine, TokenStream::Operand))
+            return null();
+        if (nextSameLine != TOK_EOL) {
+            Node kid = unaryExpr(yieldHandling, tripledotHandling, possibleError, invoked);
+            if (!kid)
+                return null();
+            pc->lastAwaitOffset = begin;
+            return newAwaitExpression(begin, kid);
+        }
+        report(ParseError, false, null(), JSMSG_LINE_BREAK_AFTER_AWAIT);
+        return null();
       }
 
       default: {
@@ -9228,22 +9249,20 @@ Parser<ParseHandler>::generatorComprehension(uint32_t begin)
 
 template <typename ParseHandler>
 typename ParseHandler::Node
-Parser<ParseHandler>::assignExprWithoutYieldAndAwait(YieldHandling yieldHandling, unsigned msg)
+Parser<ParseHandler>::assignExprWithoutYieldOrAwait(YieldHandling yieldHandling)
 {
-    TokenKind tt;
-    if (!tokenStream.peekToken(&tt, TokenStream::Operand))
-        return null();
-
-    if (tt == TOK_AWAIT) {
-        report(ParseError, false, null(), JSMSG_AWAIT_IN_DEFAULT);
-        return null();
-    }
     uint32_t startYieldOffset = pc->lastYieldOffset;
+    uint32_t startAwaitOffset = pc->lastAwaitOffset;
     Node res = assignExpr(InAllowed, yieldHandling, TripledotProhibited);
-    if (res && pc->lastYieldOffset != startYieldOffset) {
-        reportWithOffset(ParseError, false, pc->lastYieldOffset,
-                         msg, js_yield_str);
-        return null();
+    if (res) {
+        if (pc->lastYieldOffset != startYieldOffset) {
+            reportWithOffset(ParseError, false, pc->lastYieldOffset, JSMSG_YIELD_IN_DEFAULT);
+            return null();
+        }
+        if (pc->lastAwaitOffset != startAwaitOffset) {
+            reportWithOffset(ParseError, false, pc->lastAwaitOffset, JSMSG_AWAIT_IN_DEFAULT);
+            return null();
+        }
     }
     return res;
 }
@@ -9805,11 +9824,10 @@ Parser<ParseHandler>::propertyName(YieldHandling yieldHandling, Node propList,
         return null();
 
     // TOK_RC should be handled in caller.
-    MOZ_ASSERT(ltok != TOK_RC);
+    MOZ_ASSERT(ltok != TOK_RC, "caller should have handled TOK_RC");
 
     bool isGenerator = false;
     bool isAsync = false;
-
     if (ltok == TOK_MUL) {
         isGenerator = true;
         if (!tokenStream.getToken(&ltok, TokenStream::KeywordIsName))
@@ -9817,7 +9835,6 @@ Parser<ParseHandler>::propertyName(YieldHandling yieldHandling, Node propList,
     }
 
     if (ltok == TOK_NAME && tokenStream.currentName() == context->names().async) {
-fprintf(stderr, "line %d\n", __LINE__);
         // AsyncMethod[Yield, Await]:
         //   async [no LineTerminator here] PropertyName[?Yield, ?Await] ...
         //
@@ -9833,22 +9850,25 @@ fprintf(stderr, "line %d\n", __LINE__);
         // ComputedPropertyName[Yield, Await]:
         //   [ ...
         TokenKind tt = TOK_EOF;
-        if (!tokenStream.getToken(&tt, TokenStream::KeywordIsName))
+        if (!tokenStream.peekTokenSameLine(&tt, TokenStream::KeywordIsName))
             return null();
-        if (/* tt != TOK_LP && tt != TOK_COLON */
-            tt == TOK_STRING || tt == TOK_NUMBER || tt == TOK_LB ||
-            tt == TOK_NAME || tt == TOK_YIELD) {
+        if (tt == TOK_STRING || tt == TOK_NUMBER || tt == TOK_LB ||
+            tt == TOK_NAME || tt == TOK_YIELD)
+        {
             isAsync = true;
+            tokenStream.consumeKnownToken(tt, TokenStream::KeywordIsName);
             ltok = tt;
         } else {
-            tokenStream.ungetToken();
             tokenStream.addModifierException(TokenStream::NoneIsKeywordIsName);
         }
     }
 
-    if (isAsync && isGenerator) {
-        report(ParseError, false, null(), JSMSG_ASYNC_GENERATOR);
-        return null();
+    if (isAsync) {
+        if (isGenerator) {
+            report(ParseError, false, null(), JSMSG_ASYNC_GENERATOR);
+            return null();
+        }
+        if (!warnOnceAboutAsyncFuncs()) return null(); // or fail safe?
     }
 
     propAtom.set(nullptr);
@@ -9991,8 +10011,12 @@ fprintf(stderr, "line %d\n", __LINE__);
 
     if (tt == TOK_LP) {
         tokenStream.ungetToken();
-        *propType = isGenerator ? PropertyType::GeneratorMethod :
-                    (isAsync ? PropertyType::AsyncMethod : PropertyType::Method);
+        if (isGenerator)
+            *propType = PropertyType::GeneratorMethod;
+        else if (isAsync)
+            *propType = PropertyType::AsyncMethod;
+        else
+            *propType = PropertyType::Method;
         return propName;
     }
 
@@ -10084,10 +10108,23 @@ Parser<ParseHandler>::objectLiteral(YieldHandling yieldHandling, PossibleError* 
         } else if (propType == PropertyType::Shorthand) {
             /*
              * Support, e.g., |var {x, y} = o| as destructuring shorthand
-             * for |var {x: x, y: y} = o|, per proposed JS2/ES4 for JS1.8.
+             * for |var {x: x, y: y} = o|, and |var o = {x, y}| as initializer
+             * shorthand for |var o = {x: x, y: y}|.
              */
-            if (!tokenStream.checkForKeyword(propAtom, nullptr))
+            TokenKind propToken = TOK_NAME;
+            if (!tokenStream.checkForKeyword(propAtom, &propToken))
                 return null();
+
+            // Allow |yield|, as per bug 1305566 part 5 (TenFourFox issue 521).
+            if (propToken != TOK_NAME && propToken != TOK_YIELD) {
+                report(ParseError, false, null(), JSMSG_RESERVED_ID, TokenKindToDesc(propToken));
+                return null();
+            }
+            if (propToken == TOK_YIELD) {
+                // Use the same rules whether a name or keyword.
+                if (!checkYieldNameValidity())
+                    return null();
+            }
 
             Node nameExpr = identifierName(yieldHandling);
             if (!nameExpr)
@@ -10098,10 +10135,22 @@ Parser<ParseHandler>::objectLiteral(YieldHandling yieldHandling, PossibleError* 
         } else if (propType == PropertyType::CoverInitializedName) {
             /*
              * Support, e.g., |var {x=1, y=2} = o| as destructuring shorthand
-             * with default values, as per ES6 12.14.5 (2016/2/4)
+             * with default values, as per ES6 12.14.5
              */
-            if (!tokenStream.checkForKeyword(propAtom, nullptr))
+            TokenKind propToken = TOK_NAME;
+            if (!tokenStream.checkForKeyword(propAtom, &propToken))
                 return null();
+
+            // Allow |yield|, as per bug 1305566 part 5 (TenFourFox issue 521).
+            if (propToken != TOK_NAME && propToken != TOK_YIELD) {
+                report(ParseError, false, null(), JSMSG_RESERVED_ID, TokenKindToDesc(propToken));
+                return null();
+            }
+            if (propToken == TOK_YIELD) {
+                // Use the same rules whether a name or keyword.
+                if (!checkYieldNameValidity())
+                    return null();
+            }
 
             Node lhs = identifierName(yieldHandling);
             if (!lhs)
@@ -10170,6 +10219,7 @@ Parser<ParseHandler>::objectLiteral(YieldHandling yieldHandling, PossibleError* 
     return literal;
 }
 
+/* XXX: yieldHandling no longer used */
 template <typename ParseHandler>
 typename ParseHandler::Node
 Parser<ParseHandler>::methodDefinition(YieldHandling yieldHandling, PropertyType propType,
@@ -10178,7 +10228,8 @@ Parser<ParseHandler>::methodDefinition(YieldHandling yieldHandling, PropertyType
     FunctionSyntaxKind kind = FunctionSyntaxKindFromPropertyType(propType);
     GeneratorKind generatorKind = GeneratorKindFromPropertyType(propType);
     FunctionAsyncKind asyncKind = AsyncKindFromPropertyType(propType);
-    return functionDef(InAllowed, yieldHandling, funName, kind, generatorKind, asyncKind);
+    YieldHandling newYieldHandling = GetYieldHandling(generatorKind, asyncKind);
+    return functionDef(InAllowed, newYieldHandling, funName, kind, generatorKind, asyncKind);
 }
 
 template <typename ParseHandler>
@@ -10299,12 +10350,29 @@ Parser<ParseHandler>::primaryExpr(YieldHandling yieldHandling, TripledotHandling
         return stringLiteral();
 
       case TOK_YIELD:
+        if (yieldHandling == YieldIsKeyword) {
+            report(ParseError, false, null(), JSMSG_RESERVED_ID, "yield");
+            return null();
+        }
         if (!checkYieldNameValidity())
             return null();
+        // Fall through.
+      case TOK_NAME: {
+        if (tokenStream.currentName() == context->names().async) {
+            TokenKind nextSameLine = TOK_EOF;
+            if (!tokenStream.peekTokenSameLine(&nextSameLine))
+                return null();
 
-      // Fall through.
-      case TOK_NAME:
+            if (nextSameLine == TOK_FUNCTION) {
+                if (!warnOnceAboutAsyncFuncs())
+                    return null();
+                tokenStream.consumeKnownToken(TOK_FUNCTION);
+                return functionExpr(PredictUninvoked, AsyncFunction);
+            }
+        }
+
         return identifierName(yieldHandling);
+      }
 
       case TOK_REGEXP:
         return newRegExp();
@@ -10503,6 +10571,27 @@ Parser<ParseHandler>::warnOnceAboutExprClosure()
         cx->compartment()->warnedAboutExprClosure = true;
     }
 #endif
+    return true;
+}
+
+template <typename ParseHandler>
+bool
+Parser<ParseHandler>::warnOnceAboutAsyncFuncs()
+{
+    JSContext* cx = context->maybeJSContext();
+    if (!cx)
+        return true;
+
+    if (!cx->runtime()->options().asyncFuncs()) {
+        report(ParseError, false, null(), JSMSG_ASYNC_DISABLED);
+        return false;
+    }
+
+    if (!cx->compartment()->warnedAboutAsyncFuncs) {
+        if (!report(ParseWarning, false, null(), JSMSG_ASYNC_WARNING))
+            return false;
+        cx->compartment()->warnedAboutAsyncFuncs = true;
+    }
     return true;
 }
 

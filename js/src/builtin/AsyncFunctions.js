@@ -48,3 +48,4 @@ function AsyncFunction_resume(gen, v, method) {
                             return AsyncFunction_resume(gen, err, gen.throw);
                         });
 }
+

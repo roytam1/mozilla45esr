@@ -1604,9 +1604,7 @@ bool
 NodeBuilder::function(ASTType type, TokenPos* pos,
                       HandleValue id, NodeVector& args, NodeVector& defaults,
                       HandleValue body, HandleValue rest,
-                      GeneratorStyle generatorStyle,
-                      bool isAsync,
-                      bool isExpression,
+                      GeneratorStyle generatorStyle, bool isAsync, bool isExpression,
                       MutableHandleValue dst)
 {
     RootedValue array(cx), defarray(cx);
@@ -2973,7 +2971,7 @@ ASTSerializer::expression(ParseNode* pn, MutableHandleValue dst)
         return leftAssociate(pn, dst);
 
       case PNK_POW:
-        return rightAssociate(pn, dst);
+	return rightAssociate(pn, dst);
 
       case PNK_DELETENAME:
       case PNK_DELETEPROP:
@@ -3475,6 +3473,7 @@ ASTSerializer::function(ParseNode* pn, ASTType type, MutableHandleValue dst)
            ? GeneratorStyle::Legacy
            : GeneratorStyle::ES6)
         : GeneratorStyle::None;
+
     bool isAsync = pn->pn_funbox->isAsync();
     bool isExpression =
 #if JS_HAS_EXPR_CLOSURES

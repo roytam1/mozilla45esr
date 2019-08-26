@@ -18,14 +18,14 @@
     macro(apply, apply, "apply") \
     macro(arguments, arguments, "arguments") \
     macro(as, as, "as") \
-    macro(async, async, "async") \
-    macro(await, await, "await") \
     macro(ArrayIterator, ArrayIterator, "Array Iterator") \
     macro(ArrayIteratorNext, ArrayIteratorNext, "ArrayIteratorNext") \
     macro(ArrayType, ArrayType, "ArrayType") \
     macro(ArrayValues, ArrayValues, "ArrayValues") \
     macro(ArrayValuesAt, ArrayValuesAt, "ArrayValuesAt") \
     macro(Async, Async, "Async") \
+    macro(async, async, "async") \
+    macro(await, await, "await") \
     macro(breakdown, breakdown, "breakdown") \
     macro(buffer, buffer, "buffer") \
     macro(builder, builder, "builder") \

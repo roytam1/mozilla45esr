@@ -139,3 +139,4 @@ const Class ShellPromiseObject::protoClass_ = {
         ClassSpec::IsDelegated
     }
 };
+
