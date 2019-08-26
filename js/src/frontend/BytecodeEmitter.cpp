@@ -2058,6 +2058,7 @@ BytecodeEmitter::checkSideEffects(ParseNode* pn, bool* answer)
 
       case PNK_YIELD_STAR:
       case PNK_YIELD:
+      case PNK_AWAIT:
         MOZ_ASSERT(pn->isArity(PN_BINARY));
         *answer = true;
         return true;
@@ -3597,6 +3598,20 @@ BytecodeEmitter::emitFunctionScript(ParseNode* body)
         switchToMain();
     }
 
+    if (funbox->isAsync()) {
+        // Currently short-circuit async functions with a throw.
+        // TenFourFox issue 521.
+        if (!emit1(JSOP_NULL))
+            return false;
+        if (!emit1(JSOP_THROW))
+            return false;
+        if (!emit1(JSOP_NULL))
+            return false;
+        if (!emit1(JSOP_RETURN))
+            return false;
+        goto asyncout;
+    }
+
     if (!emitTree(body))
         return false;
 
@@ -3647,6 +3662,7 @@ BytecodeEmitter::emitFunctionScript(ParseNode* body)
         if (!emit1(JSOP_CHECKRETURN))
             return false;
     }
+asyncout:
 
     // Always end the script with a JSOP_RETRVAL. Some other parts of the codebase
     // depend on this opcode, e.g. InterpreterRegs::setToEndOfScript.
@@ -6489,6 +6505,11 @@ BytecodeEmitter::emitFunction(ParseNode* pn, bool needsProto)
 }
 
 bool
+BytecodeEmitter::emitAsyncWrapper(unsigned index, bool needsHomeObject) {
+    MOZ_CRASH("NYI");
+}
+
+bool
 BytecodeEmitter::emitDo(ParseNode* pn)
 {
     /* Emit an annotated nop so IonBuilder can recognize the 'do' loop. */
@@ -8472,6 +8493,7 @@ BytecodeEmitter::emitTree(ParseNode* pn, EmitLineNumberNote emitLineNote)
         break;
 
       case PNK_YIELD:
+      case PNK_AWAIT:
         if (!emitYield(pn))
             return false;
         break;

@@ -741,6 +741,7 @@ nsScriptSecurityManager::CheckLoadURIWithPrincipal(nsIPrincipal* aPrincipal,
                 BLOK("ib.adnxs.com") ||
                 BLOK("cdn.adnxs.com") ||
                 BLOK("acdn.adnxs.com") ||
+                BLOK("prebid.adnxs.com") ||
                 BLOK("secure.adnxs.com") ||
                 BLOK("yj-a.p.adnxs.com") ||
                 BLOK("nym1-ib.adnxs.com") ||
@@ -768,8 +769,10 @@ nsScriptSecurityManager::CheckLoadURIWithPrincipal(nsIPrincipal* aPrincipal,
                 BLOK("pixel.advertising.com") ||
                 BLOK("adserver-us.adtech.advertising.com") ||
                 
-                BLOK("sp.analytics.yahoo.com") ||                
                 BLOK("ads.yap.yahoo.com") ||
+                BLOK("o.analytics.yahoo.com") ||
+                BLOK("sp.analytics.yahoo.com") ||
+                BLOK("opus.analytics.yahoo.com") ||
                 
                 BLOK("cdn.gotraffic.net") ||
                 
@@ -818,6 +821,7 @@ nsScriptSecurityManager::CheckLoadURIWithPrincipal(nsIPrincipal* aPrincipal,
                 
                 BLOK("cas.criteo.com") ||
                 BLOK("rtax.criteo.com") ||
+                BLOK("bidder.criteo.com") ||
                 BLOK("static.criteo.net") ||
                 
                 BLOK("jsc.idealmedia.com") ||
@@ -885,6 +889,7 @@ nsScriptSecurityManager::CheckLoadURIWithPrincipal(nsIPrincipal* aPrincipal,
                 BLOK("edge.simplereach.com") ||
                 
                 BLOK("js.adsrvr.org") ||
+                BLOK("match.adsrvr.org") ||
                 
                 BLOK("script.crazyegg.com") ||
                 
@@ -907,6 +912,7 @@ nsScriptSecurityManager::CheckLoadURIWithPrincipal(nsIPrincipal* aPrincipal,
                 BLOK("segment-data.zqtk.net") ||
                 
                 BLOK("d.turn.com") ||
+                BLOK("ad.turn.com") ||
                 
                 BLOK("i.yldbt.com") ||
                 BLOK("cdn.yldbt.com") ||
@@ -1008,6 +1014,8 @@ nsScriptSecurityManager::CheckLoadURIWithPrincipal(nsIPrincipal* aPrincipal,
                 BLOK("route.carambo.la") ||
 
                 // Avoid blocking specific tags
+                BLOK("u.openx.net") ||
+                BLOK("rtb.openx.net") ||
                 BLOK("us-u.openx.net") ||
                 BLOK("uk-ads.openx.net") ||
                 BLOK("us-ads.openx.net") ||
@@ -1074,6 +1082,10 @@ nsScriptSecurityManager::CheckLoadURIWithPrincipal(nsIPrincipal* aPrincipal,
                 BLOK("cdn.spotxcdn.com") ||
 
                 BLOK("api.addmee.net") ||
+
+                BLOK("spl.zeotap.com") ||
+
+                BLOK("cubchannel.com") ||
 
                 BLOK("a.intentmedia.net") ||
                 BLOK("a.cdn.intentmedia.net") ||
@@ -1151,6 +1163,22 @@ nsScriptSecurityManager::CheckLoadURIWithPrincipal(nsIPrincipal* aPrincipal,
 
                 BLOK("buy.tinypass.com") ||
                 BLOK("cdn.tinypass.com") ||
+                BLOK("experience.tinypass.com") ||
+
+                BLOK("www.medtargetsystem.com") ||
+
+                BLOK("a.ad.gt") ||
+                BLOK("p.ad.gt") ||
+
+                BLOK("api.permutive.com") ||
+                BLOK("cdn.permutive.com") ||
+
+                BLOK("cdn.concert.io") ||
+
+                BLOK("e.serverbid.com") ||
+
+                BLOK("serverbid-sync.nyc3.cdn.digitaloceanspaces.com") ||
+
 #include "shavar-blocklist.h"
 
                     0) {
