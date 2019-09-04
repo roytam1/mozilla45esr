@@ -27,6 +27,10 @@ fi
 # Enable building ./signmar and running libmar signature tests
 MOZ_ENABLE_SIGNMAR=1
 
+if test "$OS_TARGET" = "WINNT"; then
+  MOZ_BUNDLED_FONTS=1
+fi
+
 MOZ_CHROME_FILE_FORMAT=omni
 MOZ_DISABLE_EXPORT_JS=1
 MOZ_SAFE_BROWSING=1
