@@ -1031,9 +1031,6 @@ nsHtml5Tokenizer::stateLoop(int32_t state, char16_t c, int32_t pos, char16_t* bu
           }
           c = checkChar(buf, pos);
           switch(c) {
-            case '\0': {
-              NS_HTML5_BREAK(stateloop);
-            }
             case '-': {
               clearStrBuf();
               state = P::transition(mViewSource, NS_HTML5TOKENIZER_COMMENT_START, reconsume, pos);
@@ -1436,9 +1433,6 @@ nsHtml5Tokenizer::stateLoop(int32_t state, char16_t c, int32_t pos, char16_t* bu
           NS_HTML5_BREAK(stateloop);
         }
         c = checkChar(buf, pos);
-        if (c == '\0') {
-          NS_HTML5_BREAK(stateloop);
-        }
         switch(c) {
           case ' ':
           case '\t':
@@ -1446,7 +1440,8 @@ nsHtml5Tokenizer::stateLoop(int32_t state, char16_t c, int32_t pos, char16_t* bu
           case '\r':
           case '\f':
           case '<':
-          case '&': {
+          case '&':
+          case '\0': {
             emitOrAppendCharRefBuf(returnState);
             if (!(returnState & NS_HTML5TOKENIZER_DATA_AND_RCDATA_MASK)) {
               cstart = pos;
@@ -1494,9 +1489,6 @@ nsHtml5Tokenizer::stateLoop(int32_t state, char16_t c, int32_t pos, char16_t* bu
             NS_HTML5_BREAK(stateloop);
           }
           c = checkChar(buf, pos);
-          if (c == '\0') {
-            NS_HTML5_BREAK(stateloop);
-          }
           int32_t hilo = 0;
           if (c <= 'z') {
             const int32_t* row = nsHtml5NamedCharactersAccel::HILO_ACCEL[c];
@@ -1531,9 +1523,6 @@ nsHtml5Tokenizer::stateLoop(int32_t state, char16_t c, int32_t pos, char16_t* bu
             NS_HTML5_BREAK(stateloop);
           }
           c = checkChar(buf, pos);
-          if (c == '\0') {
-            NS_HTML5_BREAK(stateloop);
-          }
           entCol++;
           for (; ; ) {
             if (hi < lo) {
