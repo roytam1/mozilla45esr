@@ -43,7 +43,7 @@ nsStyleChangeList::ChangeAt(int32_t aIndex, nsIFrame*& aFrame, nsIContent*& aCon
 }
 
 nsresult 
-nsStyleChangeList::ChangeAt(int32_t aIndex, const nsStyleChangeData** aChangeData) const
+nsStyleChangeList::ChangeAt(int32_t aIndex, nsStyleChangeData** aChangeData) const
 {
   if ((0 <= aIndex) && (aIndex < mCount)) {
     *aChangeData = &mArray[aIndex];

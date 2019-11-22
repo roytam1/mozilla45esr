@@ -49,7 +49,7 @@ public:
    * Fills in a pointer to the list entry storage (no reference counting
    * involved).
    */
-  nsresult ChangeAt(int32_t aIndex, const nsStyleChangeData** aChangeData) const;
+  nsresult ChangeAt(int32_t aIndex, nsStyleChangeData** aChangeData) const;
 
   nsresult AppendChange(nsIFrame* aFrame, nsIContent* aContent, nsChangeHint aHint);
 

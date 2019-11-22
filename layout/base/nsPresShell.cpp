@@ -1333,9 +1333,6 @@ PresShell::Destroy()
     // to us. To avoid the pres context having a dangling reference, set its
     // pres shell to nullptr
     mPresContext->SetShell(nullptr);
-
-    // Clear the link handler (weak reference) as well
-    mPresContext->SetLinkHandler(nullptr);
   }
 
   mHaveShutDown = true;
@@ -1998,7 +1995,8 @@ PresShell::NotifyDestroyingFrame(nsIFrame* aFrame)
     // the DisplayItemData destructor will use the destroyed frame when it
     // tries to remove it from the (array) value of this property.
     mPresContext->PropertyTable()->
-      Delete(aFrame, FrameLayerBuilder::LayerManagerDataProperty());
+      Delete(aFrame, FrameLayerBuilder::LayerManagerDataProperty(),
+             false /* aSkipBitCheck */);
   }
 }
 

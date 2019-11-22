@@ -1535,6 +1535,15 @@ JS_NewExternalString(JSContext* cx, const char16_t* chars, size_t length,
     return s;
 }
 
+JS_PUBLIC_API(JSString*)
+JS_NewMaybeExternalString(JSContext* cx, const char16_t* chars, size_t length,
+                          const JSStringFinalizer* fin, bool* isExternal)
+{
+    AssertHeapIsIdle(cx);
+    CHECK_REQUEST(cx);
+    return NewMaybeExternalString(cx, chars, length, fin, isExternal);
+}
+
 extern JS_PUBLIC_API(bool)
 JS_IsExternalString(JSString* str)
 {
@@ -4735,8 +4744,6 @@ JS_NewStringCopyN(JSContext* cx, const char* s, size_t n)
 {
     AssertHeapIsIdle(cx);
     CHECK_REQUEST(cx);
-    if (!n)
-        return cx->names().empty;
     return NewStringCopyN<CanGC>(cx, s, n);
 }
 
@@ -4745,7 +4752,7 @@ JS_NewStringCopyZ(JSContext* cx, const char* s)
 {
     AssertHeapIsIdle(cx);
     CHECK_REQUEST(cx);
-    if (!s || !*s)
+    if (!s)
         return cx->runtime()->emptyString;
     return NewStringCopyZ<CanGC>(cx, s);
 }
