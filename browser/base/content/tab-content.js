@@ -11,6 +11,9 @@ Cu.import("resource://gre/modules/XPCOMUtils.jsm");
 Cu.import("resource://gre/modules/Services.jsm");
 Cu.import("resource://gre/modules/ExtensionContent.jsm");
 
+const g104FxForcePref = "tenfourfox.reader.force-enable"; // TenFourFox issue 583
+Cu.import("resource://gre/modules/Preferences.jsm");
+
 XPCOMUtils.defineLazyModuleGetter(this, "E10SUtils",
   "resource:///modules/E10SUtils.jsm");
 XPCOMUtils.defineLazyModuleGetter(this, "BrowserUtils",
@@ -21,6 +24,8 @@ XPCOMUtils.defineLazyModuleGetter(this, "AboutReader",
   "resource://gre/modules/AboutReader.jsm");
 XPCOMUtils.defineLazyModuleGetter(this, "ReaderMode",
   "resource://gre/modules/ReaderMode.jsm");
+XPCOMUtils.defineLazyModuleGetter(this, "Readerable",
+  "resource://gre/modules/Readerable.jsm");
 XPCOMUtils.defineLazyGetter(this, "SimpleServiceDiscovery", function() {
   let ssdp = Cu.import("resource://gre/modules/SimpleServiceDiscovery.jsm", {}).SimpleServiceDiscovery;
   // Register targets
@@ -254,6 +259,7 @@ AboutPrivateBrowsingListener.init(this);
 var AboutReaderListener = {
 
   _articlePromise: null,
+  _alwaysAllowReaderMode: true, // TenFourFox issue 583
 
   init: function() {
     addEventListener("AboutReaderContentLoaded", this, false, true);
@@ -262,6 +268,17 @@ var AboutReaderListener = {
     addEventListener("pagehide", this, false);
     addMessageListener("Reader:ParseDocument", this);
     addMessageListener("Reader:PushState", this);
+    Services.prefs.addObserver(g104FxForcePref, this, false);
+  },
+
+  // TenFourFox issue 583
+  uninit: function() {
+    Services.prefs.removeObserver(g104FxForcePref, this, false);
+  },
+  observe: function(subject, topic, data) { // jshint ignore:line
+    if (topic === "nsPref:changed") {
+      this._alwaysAllowReaderMode = Preferences.get(g104FxForcePref, true);
+    }
   },
 
   receiveMessage: function(message) {
@@ -329,7 +346,7 @@ var AboutReaderListener = {
    * painted is not going to work.
    */
   updateReaderButton: function(forceNonArticle) {
-    if (!ReaderMode.isEnabledForParseOnLoad || this.isAboutReader ||
+    if (!Readerable.isEnabledForParseOnLoad || this.isAboutReader ||
         !(content.document instanceof content.HTMLDocument) ||
         content.document.mozSyntheticDocument) {
       return;
@@ -357,9 +374,28 @@ var AboutReaderListener = {
 
   onPaintWhenWaitedFor: function(forceNonArticle) {
     this.cancelPotentialPendingReadabilityCheck();
+
+    let doc = content.document;
+    if (!doc) return;
+
+    // TenFourFox issue 583
+    // If we are always allowing reader mode, don't bother spending any time
+    // processing the page. But don't let just everything through.
+    if (!this.isAboutReader && this._alwaysAllowReaderMode) {
+      // This borrows a bit from isProbablyReaderable()
+      if (!doc.mozSyntheticDocument &&
+           doc instanceof doc.defaultView.HTMLDocument) {
+        let uri = Services.io.newURI(doc.location.href, null, null);
+        if (uri && Readerable.shouldCheckUri(uri)) {
+          sendAsyncMessage("Reader:UpdateReaderButton", { isArticle: true });
+          return;
+        }
+      }
+    }
+
     // Only send updates when there are articles; there's no point updating with
     // |false| all the time.
-    if (ReaderMode.isProbablyReaderable(content.document)) {
+    if (Readerable.isProbablyReaderable(content.document)) {
       sendAsyncMessage("Reader:UpdateReaderButton", { isArticle: true });
     } else if (forceNonArticle) {
       sendAsyncMessage("Reader:UpdateReaderButton", { isArticle: false });
