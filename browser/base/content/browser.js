@@ -1317,11 +1317,8 @@ var gBrowserInit = {
 
     LightWeightThemeWebInstaller.init();
 
-// See bug 1356587. This is never called on TenFourFox.
-/*
     if (Win7Features)
       Win7Features.onOpenWindow();
-*/
 
     FullScreen.init();
 
@@ -1510,10 +1507,8 @@ var gBrowserInit = {
     if (this._boundDelayedStartup) {
       this._cancelDelayedStartup();
     } else {
-/*
       if (Win7Features)
         Win7Features.onCloseWindow();
-*/
 
       gPrefService.removeObserver(ctrlTab.prefName, ctrlTab);
       ctrlTab.uninit();
