@@ -4,6 +4,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+#include "mozilla/Preferences.h"
 #include "mozilla/TaskQueue.h"
 
 #include <string.h>
@@ -123,6 +124,12 @@ FFmpegDataDecoder<LIBAV_VER>::InitDecoder()
   mCodecContext->thread_count = PR_GetNumberOfProcessors();
   mCodecContext->thread_type = FF_THREAD_SLICE | FF_THREAD_FRAME;
   mCodecContext->thread_safe_callbacks = false;
+
+  if(Preferences::GetBool("media.ffmpeg.skip_loop_filter", false)) {
+    // Enable skipping loop filter and allow non spec compliant speedup tricks.
+    mCodecContext->flags2 |= 1; //AV_CODEC_FLAG2_FAST - could not inline for unknown reason ^-^'
+    mCodecContext->skip_loop_filter = AVDISCARD_ALL;
+  }
 
   if (mExtraData) {
     mCodecContext->extradata_size = mExtraData->Length();
