@@ -1008,7 +1008,7 @@
               return;
 
             if (!aForceUpdate) {
-              TelemetryStopwatch.start("FX_TAB_SWITCH_UPDATE_MS");
+              //TelemetryStopwatch.start("FX_TAB_SWITCH_UPDATE_MS");
               if (!Services.appinfo.browserTabsRemoteAutostart) {
                 // old way of measuring tab paint which is not
                 // valid with e10s.
@@ -1207,8 +1207,8 @@
               this.dispatchEvent(event);
             }
 
-            if (!aForceUpdate)
-              TelemetryStopwatch.finish("FX_TAB_SWITCH_UPDATE_MS");
+            /*if (!aForceUpdate)
+              TelemetryStopwatch.finish("FX_TAB_SWITCH_UPDATE_MS");*/
           ]]>
         </body>
       </method>
@@ -3509,8 +3509,8 @@
              */
 
             startTabSwitch: function () {
-              TelemetryStopwatch.cancel("FX_TAB_SWITCH_TOTAL_E10S_MS", window);
-              TelemetryStopwatch.start("FX_TAB_SWITCH_TOTAL_E10S_MS", window);
+              //TelemetryStopwatch.cancel("FX_TAB_SWITCH_TOTAL_E10S_MS", window);
+              //TelemetryStopwatch.start("FX_TAB_SWITCH_TOTAL_E10S_MS", window);
               this.addMarker("AsyncTabSwitch:Start");
             },
 
@@ -3523,26 +3523,26 @@
                   cancelable: true
                 });
                 this.tabbrowser.dispatchEvent(event);
-                let time = TelemetryStopwatch.timeElapsed("FX_TAB_SWITCH_TOTAL_E10S_MS", window);
+                /*let time = TelemetryStopwatch.timeElapsed("FX_TAB_SWITCH_TOTAL_E10S_MS", window);
                 if (time != -1) {
                   TelemetryStopwatch.finish("FX_TAB_SWITCH_TOTAL_E10S_MS", window);
                   this.log("DEBUG: tab switch time = " + time);
                   this.addMarker("AsyncTabSwitch:Finish");
-                }
+                }*/
               }
             },
 
             spinnerDisplayed: function () {
               this.assert(!this.spinnerTab);
-              TelemetryStopwatch.start("FX_TAB_SWITCH_SPINNER_VISIBLE_MS", window);
+              //TelemetryStopwatch.start("FX_TAB_SWITCH_SPINNER_VISIBLE_MS", window);
               this.addMarker("AsyncTabSwitch:SpinnerShown");
             },
 
             spinnerHidden: function () {
               this.assert(this.spinnerTab);
-              this.log("DEBUG: spinner time = " +
+              /*this.log("DEBUG: spinner time = " +
                        TelemetryStopwatch.timeElapsed("FX_TAB_SWITCH_SPINNER_VISIBLE_MS", window));
-              TelemetryStopwatch.finish("FX_TAB_SWITCH_SPINNER_VISIBLE_MS", window);
+              TelemetryStopwatch.finish("FX_TAB_SWITCH_SPINNER_VISIBLE_MS", window);*/
               this.addMarker("AsyncTabSwitch:SpinnerHidden");
               // we do not get a onPaint after displaying the spinner
               this.finishTabSwitch();
