@@ -1069,6 +1069,7 @@ class SSLErrorRunnable : public SyncRunnableBase
 
 namespace {
 
+#if(0)
 uint32_t tlsIntoleranceTelemetryBucket(PRErrorCode err)
 {
   // returns a numeric code for where we track various errors in telemetry
@@ -1091,6 +1092,7 @@ uint32_t tlsIntoleranceTelemetryBucket(PRErrorCode err)
     default: return 0;
   }
 }
+#endif
 
 bool
 retryDueToTLSIntolerance(PRErrorCode err, nsNSSSocketInfo* socketInfo)
@@ -1166,12 +1168,13 @@ retryDueToTLSIntolerance(PRErrorCode err, nsNSSSocketInfo* socketInfo)
     return false;
   }
 
+#if(0)
+#error doesn't support TLS 1.3
   uint32_t reason = tlsIntoleranceTelemetryBucket(err);
   if (reason == 0) {
     return false;
   }
 
-#if(0)
   Telemetry::ID pre;
   Telemetry::ID post;
   switch (range.max) {

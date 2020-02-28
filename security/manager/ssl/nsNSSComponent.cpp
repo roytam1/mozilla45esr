@@ -644,6 +644,13 @@ static const CipherPref sCipherPrefs[] = {
  { "security.ssl3.dhe_rsa_aes_256_sha",
    TLS_DHE_RSA_WITH_AES_256_CBC_SHA, true },
 
+ { "security.tls13.aes_128_gcm_sha256",
+   TLS_AES_128_GCM_SHA256, true },
+ { "security.tls13.chacha20_poly1305_sha256",
+   TLS_CHACHA20_POLY1305_SHA256, true },
+ { "security.tls13.aes_256_gcm_sha384",
+   TLS_AES_256_GCM_SHA384, true },
+
  { "security.ssl3.ecdhe_rsa_rc4_128_sha",
    TLS_ECDHE_RSA_WITH_RC4_128_SHA, true, true }, // deprecated (RC4)
  { "security.ssl3.ecdhe_ecdsa_rc4_128_sha",
@@ -660,13 +667,6 @@ static const CipherPref sCipherPrefs[] = {
    TLS_RSA_WITH_RC4_128_SHA, true, true }, // deprecated (RSA key exchange, RC4)
  { "security.ssl3.rsa_rc4_128_md5",
    TLS_RSA_WITH_RC4_128_MD5, true, true }, // deprecated (RSA key exchange, RC4, HMAC-MD5)
-
- { "security.tls13.aes_128_gcm_sha256",
-   TLS_AES_128_GCM_SHA256, true },
- { "security.tls13.chacha20_poly1305_sha256",
-   TLS_CHACHA20_POLY1305_SHA256, true },
- { "security.tls13.aes_256_gcm_sha384",
-   TLS_AES_256_GCM_SHA384, true },
 
  // All the rest are disabled by default
 
@@ -1097,7 +1097,6 @@ nsNSSComponent::InitializeNSS()
   SSL_OptionSetDefault(SSL_ENABLE_ALPN,
                        Preferences::GetBool("security.ssl.enable_alpn",
                                             ALPN_ENABLED_DEFAULT));
-
   SSL_OptionSetDefault(SSL_ENABLE_0RTT_DATA,
                        Preferences::GetBool("security.tls.enable_0rtt_data",
                                             ENABLED_0RTT_DATA_DEFAULT));

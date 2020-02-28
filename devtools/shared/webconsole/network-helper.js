@@ -529,7 +529,7 @@ var NetworkHelper = {
    *          If state == broken:
    *            - errorMessage: full error message from nsITransportSecurityInfo.
    *          If state == secure:
-   *            - protocolVersion: one of TLSv1, TLSv1.1, TLSv1.2.
+   *            - protocolVersion: one of TLSv1, TLSv1.1, TLSv1.2, TLSv1.3.
    *            - cipherSuite: the cipher suite used in this connection.
    *            - cert: information about certificate used in this connection.
    *                    See parseCertificateInfo for the contents.

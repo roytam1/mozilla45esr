@@ -30,8 +30,10 @@ using namespace mozilla::psm;
 
 extern PRLogModuleInfo* gPIPNSSLog;
 
+#if (0) // TenFourFox issue 334
 static void AccumulateCipherSuite(Telemetry::ID probe,
                                   const SSLChannelInfo& channelInfo);
+#endif
 
 namespace {
 
@@ -1030,6 +1032,8 @@ CanFalseStartCallback(PRFileDesc* fd, void* client_data, PRBool *canFalseStart)
   return SECSuccess;
 }
 
+#if(0) // TenFourFox issue 334
+#error this no longer has correct constants and should not be reenabled
 static void
 AccumulateNonECCKeySize(Telemetry::ID probe, uint32_t bits)
 {
@@ -1121,6 +1125,7 @@ AccumulateCipherSuite(Telemetry::ID probe, const SSLChannelInfo& channelInfo)
   MOZ_ASSERT(value != 0);
   Telemetry::Accumulate(probe, value);
 }
+#endif
 
 void HandshakeCallback(PRFileDesc* fd, void* client_data) {
   nsNSSShutDownPreventionLock locker;
@@ -1153,6 +1158,7 @@ void HandshakeCallback(PRFileDesc* fd, void* client_data) {
   rv = SSL_GetChannelInfo(fd, &channelInfo, sizeof(channelInfo));
   MOZ_ASSERT(rv == SECSuccess);
   if (rv == SECSuccess) {
+#if(0) // TenFourFox issue 334
     // Get the protocol version for telemetry
     // 0=ssl3, 1=tls1, 2=tls1.1, 3=tls1.2, 4=tls1.3
     unsigned int versionEnum = channelInfo.protocolVersion & 0xFF;
@@ -1162,6 +1168,7 @@ void HandshakeCallback(PRFileDesc* fd, void* client_data) {
       infoObject->IsFullHandshake() ? Telemetry::SSL_CIPHER_SUITE_FULL
                                     : Telemetry::SSL_CIPHER_SUITE_RESUMED,
       channelInfo);
+#endif
 
     SSLCipherSuiteInfo cipherInfo;
     rv = SSL_GetCipherSuiteInfo(channelInfo.cipherSuite, &cipherInfo,
@@ -1170,17 +1177,20 @@ void HandshakeCallback(PRFileDesc* fd, void* client_data) {
     if (rv == SECSuccess) {
       usesWeakCipher = cipherInfo.symCipher == ssl_calg_rc4;
 
+#if(0)
       // keyExchange null=0, rsa=1, dh=2, fortezza=3, ecdh=4
       Telemetry::Accumulate(
         infoObject->IsFullHandshake()
           ? Telemetry::SSL_KEY_EXCHANGE_ALGORITHM_FULL
           : Telemetry::SSL_KEY_EXCHANGE_ALGORITHM_RESUMED,
         channelInfo.keaType);
+#endif
 
       DebugOnly<int16_t> KEAUsed;
       MOZ_ASSERT(NS_SUCCEEDED(infoObject->GetKEAUsed(&KEAUsed)) &&
                  (KEAUsed == channelInfo.keaType));
 
+#if(0)
       if (infoObject->IsFullHandshake()) {
         switch (channelInfo.keaType) {
           case ssl_kea_rsa:
@@ -1231,6 +1241,7 @@ void HandshakeCallback(PRFileDesc* fd, void* client_data) {
             ? Telemetry::SSL_SYMMETRIC_CIPHER_FULL
             : Telemetry::SSL_SYMMETRIC_CIPHER_RESUMED,
           cipherInfo.symCipher);
+#endif
     }
   }
 
