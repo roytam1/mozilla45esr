@@ -425,7 +425,7 @@ nsHttpChannel::Connect()
                                     nsIScriptError::warningFlag, "CSP",
                                     innerWindowId);
 
-                Telemetry::Accumulate(Telemetry::HTTP_SCHEME_UPGRADE, 4);
+                //Telemetry::Accumulate(Telemetry::HTTP_SCHEME_UPGRADE, 4);
                 return AsyncCall(&nsHttpChannel::HandleAsyncRedirectChannelToHttps);
             }
         }
@@ -447,16 +447,16 @@ nsHttpChannel::Connect()
         if (isStsHost) {
             LOG(("nsHttpChannel::Connect() STS permissions found\n"));
             if (mAllowSTS) {
-                Telemetry::Accumulate(Telemetry::HTTP_SCHEME_UPGRADE, 3);
+                //Telemetry::Accumulate(Telemetry::HTTP_SCHEME_UPGRADE, 3);
                 return AsyncCall(&nsHttpChannel::HandleAsyncRedirectChannelToHttps);
             } else {
-                Telemetry::Accumulate(Telemetry::HTTP_SCHEME_UPGRADE, 2);
+                //Telemetry::Accumulate(Telemetry::HTTP_SCHEME_UPGRADE, 2);
             }
         } else {
-            Telemetry::Accumulate(Telemetry::HTTP_SCHEME_UPGRADE, 1);
+            //Telemetry::Accumulate(Telemetry::HTTP_SCHEME_UPGRADE, 1);
         }
     } else {
-        Telemetry::Accumulate(Telemetry::HTTP_SCHEME_UPGRADE, 0);
+        //Telemetry::Accumulate(Telemetry::HTTP_SCHEME_UPGRADE, 0);
     }
 
     // ensure that we are using a valid hostname
