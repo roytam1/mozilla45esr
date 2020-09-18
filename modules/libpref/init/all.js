@@ -5168,3 +5168,7 @@ pref("tenfourfox.adblock.logging.enabled", false);
 
 // TenFourFox issue 583
 pref("tenfourfox.reader.force-enable", true);
+
+// TenFourFox issue 620
+pref("tenfourfox.reader.sticky", true);
+pref("tenfourfox.reader.sticky.tabs.loadInBackground", false);
