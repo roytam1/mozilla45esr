@@ -3215,12 +3215,15 @@ PropertyProvider::GetSpacing(uint32_t aStart, uint32_t aLength,
 }
 
 static bool
-CanAddSpacingAfter(gfxTextRun* aTextRun, uint32_t aOffset)
+CanAddSpacingAfter(gfxTextRun* aTextRun, uint32_t aOffset,
+                   bool aNewlineIsSignificant)
 {
   if (aOffset + 1 >= aTextRun->GetLength())
     return true;
   return aTextRun->IsClusterStart(aOffset + 1) &&
-    aTextRun->IsLigatureGroupStart(aOffset + 1);
+    aTextRun->IsLigatureGroupStart(aOffset + 1) &&
+   !aTextRun->CharIsFormattingControl(aOffset) &&
+   !(aNewlineIsSignificant && aTextRun->CharIsNewline(aOffset));
 }
 
 void
@@ -3244,11 +3247,13 @@ PropertyProvider::GetSpacingInternal(uint32_t aStart, uint32_t aLength,
     // Iterate over non-skipped characters
     nsSkipCharsRunIterator
       run(start, nsSkipCharsRunIterator::LENGTH_UNSKIPPED_ONLY, aLength);
+    bool newlineIsSignificant = mTextStyle->NewlineIsSignificant(mFrame);
     while (run.NextRun()) {
       uint32_t runOffsetInSubstring = run.GetSkippedOffset() - aStart;
       gfxSkipCharsIterator iter = run.GetPos();
       for (int32_t i = 0; i < run.GetRunLength(); ++i) {
-        if (CanAddSpacingAfter(mTextRun, run.GetSkippedOffset() + i)) {
+        if (CanAddSpacingAfter(mTextRun, run.GetSkippedOffset() + i,
+                               newlineIsSignificant)) {
           // End of a cluster, not in a ligature: put letter-spacing after it
           aSpacing[runOffsetInSubstring + i].mAfter += mLetterSpacing;
         }
@@ -7930,7 +7935,9 @@ nsTextFrame::AddInlineMinISizeForFlow(nsRenderingContext *aRenderingContext,
 
     if (i > wordStart) {
       nscoord width =
-        NSToCoordCeilClamped(textRun->GetAdvanceWidth(wordStart, i - wordStart, &provider));
+        NSToCoordCeilClamped(textRun->GetAdvanceWidth(wordStart, i - wordStart,
+                                                      &provider));
+      width = std::max(0, width);
       aData->currentLine = NSCoordSaturatingAdd(aData->currentLine, width);
       aData->atStartOfLine = false;
 
@@ -7942,8 +7949,11 @@ nsTextFrame::AddInlineMinISizeForFlow(nsRenderingContext *aRenderingContext,
           aData->trailingWhitespace += width;
         } else {
           // Some non-whitespace so the old trailingWhitespace is no longer trailing
-          aData->trailingWhitespace =
-            NSToCoordCeilClamped(textRun->GetAdvanceWidth(trimStart, i - trimStart, &provider));
+          nscoord wsWidth =
+            NSToCoordCeilClamped(textRun->GetAdvanceWidth(trimStart,
+                                                          i - trimStart,
+                                                          &provider));
+          aData->trailingWhitespace = std::max(0, wsWidth);
         }
       } else {
         aData->trailingWhitespace = 0;
@@ -8082,7 +8092,9 @@ nsTextFrame::AddInlinePrefISizeForFlow(nsRenderingContext *aRenderingContext,
 
     if (i > lineStart) {
       nscoord width =
-        NSToCoordCeilClamped(textRun->GetAdvanceWidth(lineStart, i - lineStart, &provider));
+        NSToCoordCeilClamped(textRun->GetAdvanceWidth(lineStart, i - lineStart,
+                                                      &provider));
+      width = std::max(0, width);
       aData->currentLine = NSCoordSaturatingAdd(aData->currentLine, width);
 
       if (collapseWhitespace) {
@@ -8093,8 +8105,11 @@ nsTextFrame::AddInlinePrefISizeForFlow(nsRenderingContext *aRenderingContext,
           aData->trailingWhitespace += width;
         } else {
           // Some non-whitespace so the old trailingWhitespace is no longer trailing
-          aData->trailingWhitespace =
-            NSToCoordCeilClamped(textRun->GetAdvanceWidth(trimStart, i - trimStart, &provider));
+          nscoord wsWidth =
+            NSToCoordCeilClamped(textRun->GetAdvanceWidth(trimStart,
+                                                          i - trimStart,
+                                                          &provider));
+          aData->trailingWhitespace = std::max(0, wsWidth);
         }
       } else {
         aData->trailingWhitespace = 0;
