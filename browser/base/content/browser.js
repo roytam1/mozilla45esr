@@ -5382,6 +5382,7 @@ const nodeToTooltipMap = {
   "tabs-newtab-button": "newTabButton.tooltip",
   "fullscreen-button": "fullscreenButton.tooltip",
   "downloads-button": "downloads.tooltip",
+  "reader-mode-button": "reader-mode-button.tooltip",
 };
 const nodeToShortcutMap = {
   "bookmarks-menu-button": "manBookmarkKb",
@@ -5389,7 +5390,8 @@ const nodeToShortcutMap = {
   "new-tab-button": "key_newNavigatorTab",
   "tabs-newtab-button": "key_newNavigatorTab",
   "fullscreen-button": "key_fullScreen",
-  "downloads-button": "key_openDownloads"
+  "downloads-button": "key_openDownloads",
+  "reader-mode-button": "key_toggleReaderMode",
 };
 
 if (AppConstants.platform == "macosx") {

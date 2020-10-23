@@ -323,7 +323,8 @@
 #endif
                 <menuitem id="menu_readerModeItem"
                           observes="View:ReaderView"
-                          hidden="true"/>
+                          key="key_toggleReaderMode"
+                          label="&toggleReaderMode.label;"/>
                 <menuitem id="menu_showAllTabs"
                           hidden="true"
                           accesskey="&showAllTabsCmd.accesskey;"
