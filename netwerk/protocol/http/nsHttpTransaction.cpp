@@ -26,7 +26,6 @@
 #include "nsStringStream.h"
 
 #include "nsComponentManagerUtils.h" // do_CreateInstance
-#include "nsServiceManagerUtils.h"   // do_GetService
 #include "nsIHttpActivityObserver.h"
 #include "nsSocketTransportService2.h"
 #include "nsICancelable.h"
@@ -36,6 +35,8 @@
 #include "nsITransport.h"
 #include "nsIOService.h"
 #include "nsISchedulingContext.h"
+#include "NSSErrorsService.h"
+#include "sslerr.h"
 #include <algorithm>
 
 #ifdef MOZ_WIDGET_GONK
@@ -230,8 +231,10 @@ nsHttpTransaction::Init(uint32_t caps,
     MOZ_ASSERT(requestHead);
     MOZ_ASSERT(target);
 
-    mActivityDistributor = do_GetService(NS_HTTPACTIVITYDISTRIBUTOR_CONTRACTID, &rv);
-    if (NS_FAILED(rv)) return rv;
+    mActivityDistributor = services::GetActivityDistributor();
+    if (!mActivityDistributor) {
+        return NS_ERROR_NOT_AVAILABLE;
+    }
 
     bool activityDistributorActive;
     rv = mActivityDistributor->GetIsActive(&activityDistributorActive);
@@ -996,8 +999,7 @@ nsHttpTransaction::Close(nsresult reason)
     // sent any data.  for this reason, mSendData == FALSE does not imply
     // mReceivedData == FALSE.  (see bug 203057 for more info.)
     //
-    if (reason == NS_ERROR_NET_RESET || reason == NS_OK) {
-
+    if (reason == NS_ERROR_NET_RESET || reason == NS_OK || reason == psm::GetXPCOMFromNSSError(SSL_ERROR_DOWNGRADE_WITH_EARLY_DATA)) {
         if (mForceRestart && NS_SUCCEEDED(Restart())) {
             if (mResponseHead) {
                 mResponseHead->Reset();
@@ -1024,8 +1026,10 @@ nsHttpTransaction::Close(nsresult reason)
         bool reallySentData =
             mSentData && (!mConnection || mConnection->BytesWritten());
 
-        if (!mReceivedData &&
-            (!reallySentData || connReused || mPipelinePosition)) {
+        if (reason == psm::GetXPCOMFromNSSError(SSL_ERROR_DOWNGRADE_WITH_EARLY_DATA) ||
+            (!mReceivedData &&
+            ((mRequestHead && mRequestHead->IsSafeMethod()) ||
+             !reallySentData || connReused))) {
             // if restarting fails, then we must proceed to close the pipe,
             // which will notify the channel that the transaction failed.
 

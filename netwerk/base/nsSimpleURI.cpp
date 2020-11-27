@@ -192,33 +192,23 @@ NS_IMETHODIMP
 nsSimpleURI::SetSpec(const nsACString &aSpec)
 {
     NS_ENSURE_STATE(mMutable);
-    
-    const nsAFlatCString& flat = PromiseFlatCString(aSpec);
-    const char* specPtr = flat.get();
 
-    // filter out unexpected chars "\r\n\t" if necessary
-    nsAutoCString filteredSpec;
-    int32_t specLen;
-    if (net_FilterURIString(specPtr, filteredSpec)) {
-        specPtr = filteredSpec.get();
-        specLen = filteredSpec.Length();
-    } else
-        specLen = flat.Length();
-
-    // nsSimpleURI currently restricts the charset to US-ASCII
-    nsAutoCString spec;
-    NS_EscapeURL(specPtr, specLen, esc_OnlyNonASCII|esc_AlwaysCopy, spec);
-
-    int32_t colonPos = spec.FindChar(':');
-    if (colonPos < 0 || !net_IsValidScheme(spec.get(), colonPos))
-        return NS_ERROR_MALFORMED_URI;
-
-    mScheme.Truncate();
-    mozilla::DebugOnly<int32_t> n = spec.Left(mScheme, colonPos);
-    NS_ASSERTION(n == colonPos, "Left failed");
+    nsresult rv = net_ExtractURLScheme(aSpec, mScheme);
+    if (NS_FAILED(rv)) {
+        return rv;
+    }
     ToLowerCase(mScheme);
 
+    nsAutoCString spec;
+    rv = net_FilterAndEscapeURI(aSpec, esc_OnlyNonASCII, spec);
+    if (NS_FAILED(rv)) {
+        return rv;
+    }
+
+    int32_t colonPos = spec.FindChar(':');
+    MOZ_ASSERT(colonPos != kNotFound, "A colon should be in this string");
     // This sets both mPath and mRef.
+    // If changed, see bug 1369317, especially part 2 -- Cameron
     return SetPath(Substring(spec, colonPos + 1));
 }
 
@@ -389,7 +379,13 @@ nsSimpleURI::SetRef(const nsACString &aRef)
 {
     NS_ENSURE_STATE(mMutable);
 
-    if (aRef.IsEmpty()) {
+    nsAutoCString ref;
+    nsresult rv = NS_EscapeURL(aRef, esc_OnlyNonASCII, ref, fallible);
+    if (NS_FAILED(rv)) {
+      return rv;
+    }
+
+    if (ref.IsEmpty()) {
       // Empty string means to remove ref completely.
       mIsRefValid = false;
       mRef.Truncate(); // invariant: mRef should be empty when it's not valid
@@ -519,12 +515,11 @@ nsSimpleURI::Resolve(const nsACString &relativePath, nsACString &result)
 }
 
 NS_IMETHODIMP
-nsSimpleURI::GetAsciiSpec(nsACString &result)
+nsSimpleURI::GetAsciiSpec(nsACString &aResult)
 {
-    nsAutoCString buf;
-    nsresult rv = GetSpec(buf);
+    nsresult rv = GetSpec(aResult);
     if (NS_FAILED(rv)) return rv;
-    NS_EscapeURL(buf, esc_OnlyNonASCII|esc_AlwaysCopy, result);
+    MOZ_ASSERT(IsASCII(aResult), "The spec should be ASCII");
     return NS_OK;
 }
 

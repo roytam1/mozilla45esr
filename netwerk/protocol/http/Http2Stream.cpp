@@ -354,7 +354,7 @@ nsresult
 Http2Stream::MakeOriginURL(const nsACString &origin, RefPtr<nsStandardURL> &url)
 {
   nsAutoCString scheme;
-  nsresult rv = net_ExtractURLScheme(origin, nullptr, nullptr, &scheme);
+  nsresult rv = net_ExtractURLScheme(origin, scheme);
   NS_ENSURE_SUCCESS(rv, rv);
   return MakeOriginURL(scheme, origin, url);
 }
@@ -1496,8 +1496,8 @@ bool
 Http2Stream::Do0RTT()
 {
   MOZ_ASSERT(mTransaction);
-  mAttempting0RTT = true;
-  return mTransaction->Do0RTT();
+  mAttempting0RTT = mTransaction->Do0RTT();
+  return mAttempting0RTT;
 }
 
 nsresult

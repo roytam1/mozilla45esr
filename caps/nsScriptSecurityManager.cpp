@@ -1250,6 +1250,10 @@ nsScriptSecurityManager::CheckLoadURIWithPrincipal(nsIPrincipal* aPrincipal,
                 BLOK("s3.buysellads.com") ||
                 BLOK("srv.buysellads.com") ||
 
+                BLOK("ads.intentiq.com") ||
+
+                BLOK("tag.durationmedia.net") ||
+
 #include "shavar-blocklist.h"
 
                     0) {
