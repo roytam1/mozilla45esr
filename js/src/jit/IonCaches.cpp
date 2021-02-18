@@ -4109,7 +4109,7 @@ GenerateGetTypedOrUnboxedArrayElement(JSContext* cx, MacroAssembler& masm,
 
     if (IsAnyTypedArray(array)) {
         // Guard on the initialized length.
-        Address length(object, TypedArrayObject::lengthOffset() + NUNBOX32_PAYLOAD_OFFSET);
+        Address length(object, TypedArrayObject::lengthOffset());
         masm.branch32(Assembler::BelowOrEqual, length, indexReg, &failures);
 
         // Save the object register on the stack in case of failure.
