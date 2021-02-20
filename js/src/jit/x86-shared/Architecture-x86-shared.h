@@ -39,7 +39,11 @@ static const uint32_t ION_FRAME_SLACK_SIZE     = 24;
 // These offsets are specific to nunboxing, and capture offsets into the
 // components of a js::Value.
 static const int32_t NUNBOX32_TYPE_OFFSET         = 4;
+#endif
+#if defined(JS_CODEGEN_X86) || defined(JS_CODEGEN_X64)
 static const int32_t NUNBOX32_PAYLOAD_OFFSET      = 0;
+#endif
+#if defined(JS_CODEGEN_X86)
 
 // Size of each bailout table entry. On x86 this is a 5-byte relative call.
 static const uint32_t BAILOUT_TABLE_ENTRY_SIZE    = 5;
