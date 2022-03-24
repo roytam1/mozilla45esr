@@ -1334,15 +1334,6 @@ PREFIX(_intersect_rect) (region_type_t *dest,
     region.extents.x2 = x + width;
     region.extents.y2 = y + height;
 
-    if (!GOOD_RECT (&region.extents))
-    {
-        if (BAD_RECT (&region.extents))
-            _pixman_log_error (FUNC, "Invalid rectangle passed");
-        FREE_DATA (dest);
-        PREFIX (_init) (dest);
-        return TRUE;
-    }
-
     return PREFIX(_intersect) (dest, source, &region);
 }
 
@@ -1867,7 +1858,7 @@ pixman_region_subtract_o (region_type_t * region,
         else if (r2->x1 <= x1)
         {
             /*
-	     * Subtrahend preceeds minuend: nuke left edge of minuend.
+	     * Subtrahend precedes minuend: nuke left edge of minuend.
 	     */
             x1 = r2->x2;
             if (x1 >= r1->x2)
@@ -1991,7 +1982,7 @@ PREFIX (_subtract) (region_type_t *reg_d,
     }
 
     /* Add those rectangles in region 1 that aren't in region 2,
-       do yucky substraction for overlaps, and
+       do yucky subtraction for overlaps, and
        just throw away rectangles in region 2 that aren't in region 1 */
     if (!pixman_op (reg_d, reg_m, reg_s, pixman_region_subtract_o, TRUE, FALSE))
 	return FALSE;
@@ -2051,7 +2042,7 @@ PREFIX (_inverse) (region_type_t *new_reg,  /* Destination region */
     }
 
     /* Add those rectangles in region 1 that aren't in region 2,
-     * do yucky substraction for overlaps, and
+     * do yucky subtraction for overlaps, and
      * just throw away rectangles in region 2 that aren't in region 1
      */
     inv_reg.extents = *inv_rect;
