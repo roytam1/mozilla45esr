@@ -656,6 +656,10 @@ static const CipherPref sCipherPrefs[] = {
  { "security.ssl3.ecdhe_ecdsa_rc4_128_sha",
    TLS_ECDHE_ECDSA_WITH_RC4_128_SHA, true, true }, // deprecated (RC4)
 
+ { "security.ssl3.rsa_aes_256_gcm_sha384",
+   TLS_RSA_WITH_AES_256_GCM_SHA384, true },  // deprecated (RSA key exchange)
+ {"security.ssl3.rsa_aes_128_gcm_sha256",
+   TLS_RSA_WITH_AES_128_GCM_SHA256, true },  // deprecated (RSA key exchange)
  { "security.ssl3.rsa_aes_128_sha",
    TLS_RSA_WITH_AES_128_CBC_SHA, true }, // deprecated (RSA key exchange)
  { "security.ssl3.rsa_aes_256_sha",
