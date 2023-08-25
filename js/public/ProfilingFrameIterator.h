@@ -147,11 +147,11 @@ JS_FRIEND_API(void)
 UpdateJSRuntimeProfilerSampleBufferGen(JSRuntime* runtime, uint32_t generation,
                                        uint32_t lapCount);
 
-struct ForEachProfiledFrameOp
+struct JS_PUBLIC_API(ForEachProfiledFrameOp)
 {
     // A handle to the underlying JitcodeGlobalEntry, so as to avoid repeated
     // lookups on JitcodeGlobalTable.
-    class MOZ_STACK_CLASS FrameHandle
+    class MOZ_STACK_CLASS JS_PUBLIC_API(FrameHandle)
     {
         friend JS_PUBLIC_API(void) ForEachProfiledFrame(JSRuntime* rt, void* addr,
                                                         ForEachProfiledFrameOp& op);

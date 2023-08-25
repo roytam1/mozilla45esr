@@ -2418,7 +2418,7 @@ JS_FreezeObject(JSContext* cx, JS::Handle<JSObject*> obj);
 
 /*** Property descriptors ************************************************************************/
 
-struct JSPropertyDescriptor : public JS::Traceable {
+struct JS_PUBLIC_API(JSPropertyDescriptor) : public JS::Traceable {
     JSObject* obj;
     unsigned attrs;
     JSGetterOp getter;
@@ -5679,7 +5679,7 @@ class AutoStopwatch;
  * provide a concrete implementation of this class, as well as the
  * relevant callbacks (see below).
  */
-struct PerformanceGroup {
+struct JS_PUBLIC_API(PerformanceGroup) {
     PerformanceGroup();
 
     // The current iteration of the event loop.

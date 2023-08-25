@@ -34,6 +34,11 @@ if CONFIG['OS_ARCH'] == 'WINNT':
         'esent.dll',
     ]
 
+if CONFIG['JS_SHARED_LIBRARY']:
+    USE_LIBS += [
+        'js',
+    ]
+
 # Mac: Need to link with CoreFoundation for Mac Migrators (PList reading code)
 # GTK2: Need to link with glib for GNOME shell service
 if CONFIG['MOZ_WIDGET_TOOLKIT'] in ('cocoa', 'gtk2', 'gtk3'):
