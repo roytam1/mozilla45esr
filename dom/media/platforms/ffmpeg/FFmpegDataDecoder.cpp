@@ -115,8 +115,12 @@ FFmpegDataDecoder<LIBAV_VER>::InitDecoder()
   uint32_t major, minor, micro;
   FFmpegRuntimeLinker::GetVersion(major, minor, micro);
   // LibAV 0.8 produces rubbish float interleaved samples, request 16 bits audio.
-  mCodecContext->request_sample_fmt = major == 53 ?
-    AV_SAMPLE_FMT_S16 : AV_SAMPLE_FMT_FLT;
+  mCodecContext->request_sample_fmt =
+#ifdef MOZ_SAMPLE_TYPE_FLOAT32
+    (major == 53) ? AV_SAMPLE_FMT_S16 : AV_SAMPLE_FMT_FLT;
+#else
+    AV_SAMPLE_FMT_S16;
+#endif
 
   // FFmpeg will call back to this to negotiate a video pixel format.
   mCodecContext->get_format = ChoosePixelFormat;
