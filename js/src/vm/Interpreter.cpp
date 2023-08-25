@@ -3851,6 +3851,7 @@ END_CASE(JSOP_INITHOMEOBJECT)
 CASE(JSOP_SUPERBASE)
 {
     JSFunction& superEnvFunc = GetSuperEnvFunction(cx, REGS);
+    if(!superEnvFunc.allowSuperProperty()) goto error;
     MOZ_ASSERT(superEnvFunc.allowSuperProperty());
     MOZ_ASSERT(superEnvFunc.nonLazyScript()->needsHomeObject());
     const Value& homeObjVal = superEnvFunc.getExtendedSlot(FunctionExtended::METHOD_HOMEOBJECT_SLOT);
