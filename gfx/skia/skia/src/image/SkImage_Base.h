@@ -10,7 +10,7 @@
 
 #include "SkImage.h"
 
-class SkImage_Base : public SkImage {
+class SK_API SkImage_Base : public SkImage {
 public:
     SkImage_Base(int width, int height) : INHERITED(width, height) {}
 

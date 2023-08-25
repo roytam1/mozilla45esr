@@ -205,7 +205,7 @@ protected:
         Common() {}
         ~Common();
 
-        bool unflatten(SkReadBuffer&, int expectedInputs = -1);
+        SK_API bool unflatten(SkReadBuffer&, int expectedInputs = -1);
 
         CropRect        cropRect() const { return fCropRect; }
         int             inputCount() const { return fInputs.count(); }

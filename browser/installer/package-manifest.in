@@ -82,6 +82,9 @@
 @BINPATH@/@DLL_PREFIX@plds4@DLL_SUFFIX@
 #endif
 #endif
+#ifdef GKMEDIAS_SHARED_LIBRARY
+@BINPATH@/@DLL_PREFIX@gkmedias@DLL_SUFFIX@
+#endif
 #ifdef XP_MACOSX
 @BINPATH@/XUL
 #else

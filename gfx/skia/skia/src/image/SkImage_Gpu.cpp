@@ -13,7 +13,7 @@
 #include "GrTexture.h"
 #include "SkGrPixelRef.h"
 
-class SkImage_Gpu : public SkImage_Base {
+class SK_API SkImage_Gpu : public SkImage_Base {
 public:
     SK_DECLARE_INST_COUNT(SkImage_Gpu)
 

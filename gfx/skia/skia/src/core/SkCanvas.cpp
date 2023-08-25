@@ -13,6 +13,7 @@
 #include "SkDrawFilter.h"
 #include "SkDrawLooper.h"
 #include "SkMetaData.h"
+#include "SkNWayCanvas.h"
 #include "SkPathOps.h"
 #include "SkPicture.h"
 #include "SkRasterClip.h"
@@ -27,6 +28,8 @@
 #if SK_SUPPORT_GPU
 #include "GrRenderTarget.h"
 #endif
+
+class SkNWayCanvas;
 
 // experimental for faster tiled drawing...
 //#define SK_ENABLE_CLIP_QUICKREJECT
